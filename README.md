@@ -61,9 +61,7 @@ Per quanto riguarda le performance sono quasi sempre fisse a 60fps. Ci sono alcu
 
 - Spada piccola
 
-<p align="left">
-  <img width="132" height="336" src="screenshot/smallSword.png">
-</p>
+![]("screenshot/smallSword.png")
 
 - Falce
 
