@@ -1257,7 +1257,7 @@
                     }
                 });
                 textureSelection = gui.addFolder('Texture Selection');
-                textureSelection.add(material,'texture1',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword']).onChange(function(newVal){
+                textureSelection.add(material,'texture1',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','GoldCasual']).onChange(function(newVal){
                     if(newVal=='MetalAxe'){
                         uniforms1.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms1.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -1314,6 +1314,13 @@
                         uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms1.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/prova5.jpg" );
                     }else{
                         uniforms1.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
                         uniforms1.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
@@ -1323,7 +1330,7 @@
                         uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
                     }
                 });
-                textureSelection.add(material,'texture2',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword']).onChange(function(newVal){
+                textureSelection.add(material,'texture2',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','GoldCasual']).onChange(function(newVal){
                     if(newVal=='MetalAxe'){
                         uniforms2.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms2.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -1380,6 +1387,13 @@
                         uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms2.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/prova5.jpg" );
                     }else{
                         uniforms2.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
                         uniforms2.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
@@ -1389,7 +1403,7 @@
                         uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
                     }
                 });
-                textureSelection.add(material,'texture3',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword']).onChange(function(newVal){
+                textureSelection.add(material,'texture3',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','GoldCasual']).onChange(function(newVal){
                     if(newVal=='MetalAxe'){
                         uniforms3.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -1446,6 +1460,13 @@
                         uniforms3.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms3.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms3.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms3.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/prova5.jpg" );
                     }else{
                         uniforms3.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
                         uniforms3.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
@@ -1455,7 +1476,7 @@
                         uniforms3.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
                     }
                 });
-                textureSelection.add(material,'texture4',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','']).onChange(function(newVal){
+                textureSelection.add(material,'texture4',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','','GoldCasual']).onChange(function(newVal){
                     if(newVal=='MetalAxe'){
                         uniforms4.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms4.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -1512,6 +1533,13 @@
                         uniforms4.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms4.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms4.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/prova5.jpg" );
                     }else{
                         uniforms4.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
                         uniforms4.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
@@ -1521,7 +1549,7 @@
                         uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
                     }
                 });
-                textureSelection.add(material,'texture5',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','']).onChange(function(newVal){
+                textureSelection.add(material,'texture5',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','','GoldCasual']).onChange(function(newVal){
                     if(newVal=='MetalAxe'){
                         uniforms5.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms5.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -1578,6 +1606,13 @@
                         uniforms5.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms5.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms5.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms5.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms5.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/prova5.jpg" );
                     }else{
                         uniforms5.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
                         uniforms5.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
