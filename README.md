@@ -43,21 +43,15 @@ Per quanto riguarda le performance sono quasi sempre fisse a 60fps. Ci sono alcu
 
 - Ascia
 
-<p align="left">
-  <img width="132" height="336" src="screenshot/axes.png">
-</p>
+![](screenshot/axes.png)
 
 - Scudo
 
-<p align="left">
-  <img width="132" height="336" src="screenshot/shield.png">
-</p>
+![](screenshot/shield.png)
 
 - Spada
 
-<p align="left">
-  <img width="132" height="336" src="screenshot/sword.png">
-</p>
+![](screenshot/sword.png)
 
 - Spada piccola
 
@@ -66,11 +60,6 @@ Per quanto riguarda le performance sono quasi sempre fisse a 60fps. Ci sono alcu
 - Falce
 
 ![](screenshot/sickel.png)
-
-<p align="left">
-  <img width="132" height="336" src="screenshot/sickel.png">
-</p>
-
 
 
 # Contenuto repository
