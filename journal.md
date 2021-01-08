@@ -18,6 +18,8 @@ Invece, i materiali disponibili sono:
 
 Per la realizzazione dei modelli 3d si è deciso di utilizzare il software Blender. I modelli sono stati creati in maniera libera senza niente come base.
 
+![](screenshot/models.png)
+
 
 # BRDF e luci
 
