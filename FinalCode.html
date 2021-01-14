@@ -1,36 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 	<head>
-		<title>project</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-		<style>
-			body {
-				background-color: #f0f0f0;
-				margin: 0px;
-				overflow: hidden;
-			}
-
-			#info {
-				position: absolute;
-				top: 0px; width: 100%;
-				color: #222;
-				padding: 5px;
-				font-family: Monospace;
-				font-size: 13px;
-				text-align: center;
-			}
-
-			a {
-				color: #000;
-				text-decoration: none;
-			}
-
-			a:hover {
-				color: #0080ff;
-			}
-		</style>
-	</head>
+        <meta charset=UTF-8 />
+        <link rel="stylesheet" type="text/css" href="styles.css" />
+      </head>
 	<body>
 		<script src="libs/three.js"></script>
 		<script src="libs/stats.min.js"></script>
@@ -39,6 +12,7 @@
 		<script src='libs/GLTFLoader.js'></script>
         <script src='libs/BufferGeometryUtils.js'></script>
         <script src='libs/Object3d.js'></script>
+        <script src='libs/postprocessing.min.js'></script>
 
 		<!-- shaders -->
 
@@ -223,7 +197,7 @@
 
             //variabili per la gestione delle texture, dell'oggetto 3d, dei parametri d'interazione con l'utente
 			var renderer = new THREE.WebGLRenderer( { antialias: true } );
-			var camera = new THREE.PerspectiveCamera( 35, window.innerWidth / window.innerHeight, 1, 1000 );
+			var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 50000 );
 			var controls = new THREE.OrbitControls( camera, renderer.domElement );
 			var scene = new THREE.Scene();
             var obj=new THREE.Object3D();
@@ -231,6 +205,8 @@
             var dirL;
             var config=0;
             scene.add(obj);  
+            var composer;
+            var ok=0;
 
 			var normalMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
             var normalMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
@@ -286,6 +262,10 @@
             var oggetto = {
 				model: 'Axe'
 			}
+
+            var raygodsS={
+                ray:false
+            }
 
             var material = {
 				texture1: 'MetalAxe',
@@ -867,7 +847,7 @@
 			    stats.domElement.style.top = '0px';
 			    document.body.appendChild( stats.domElement );
 
-				ourMaterial.needsUpdate = true;
+                ourMaterial.needsUpdate = true;
 
 			}
 
@@ -887,7 +867,16 @@
 			}
 
 			function render() {
-				renderer.render( scene, camera );
+                //renderer.render( scene, camera );
+
+                if(ok==1 && raygodsS.ray){
+                    renderer.clear();
+                    composer.render(0.1);
+                    stats.update();
+                }else if(!raygodsS.ray){
+                    renderer.clearDepth();
+                    renderer.render( scene, camera );
+                }
 
 			}
 
@@ -968,7 +957,7 @@
                         material.texture4='';
                         material.texture5='';
                         textureSelection.updateDisplay();
-                    }else if(newVal=='Small Sword'){
+                    }else if(newVal=='Sword'){
                         scene.remove(obj);
                         obj=new THREE.Object3D();
                         scene.add(obj);
@@ -1046,6 +1035,32 @@
                         textureSelection.updateDisplay();
                     }
                 });
+                raygods=gui.addFolder('Ray Gods');
+                raygods.add(raygodsS,'ray').onChange(function(newVal){
+                    raygodsS.ray=newVal;
+                    if(newVal){
+                        let areaImage = new Image();
+                    areaImage.src = POSTPROCESSING.SMAAEffect.areaImageDataURL;
+                    let searchImage = new Image();
+                    searchImage.src = POSTPROCESSING.SMAAEffect.searchImageDataURL;
+                    let smaaEffect = new POSTPROCESSING.SMAAEffect(searchImage,areaImage,1);
+                    let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, objects[objects.length-1], {
+                        resolutionScale: 1,
+                        density: 0.8,
+                        decay: 0.95,
+                        weight: 0.9,
+                        samples: 100
+                    });
+                    composer = new POSTPROCESSING.EffectComposer(renderer);
+                    let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+                    composer.addPass(renderPass);
+                    let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect);
+                    effectPass.renderToScreen = true;
+                    composer.addPass(effectPass);
+                    ok=1;
+                    }
+                    update();
+                })
                 transormation=gui.addFolder('Transformation');
                 transormation.add(rotation,'rotationX').min(0).max(360).onChange(function(newVal){
                     obj.rotation.x=newVal*Math.PI/180;
@@ -1622,6 +1637,34 @@
                         uniforms5.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
                     }
                 });
+
+                raygods=gui.addFolder('Ray Gods');
+                raygods.add(raygodsS,'ray').onChange(function(newVal){
+                    raygodsS.ray=newVal;
+                    if(newVal){
+                        let areaImage = new Image();
+                    areaImage.src = POSTPROCESSING.SMAAEffect.areaImageDataURL;
+                    let searchImage = new Image();
+                    searchImage.src = POSTPROCESSING.SMAAEffect.searchImageDataURL;
+                    let smaaEffect = new POSTPROCESSING.SMAAEffect(searchImage,areaImage,1);
+                    let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, objects[objects.length-1], {
+                        resolutionScale: 1,
+                        density: 0.8,
+                        decay: 0.95,
+                        weight: 0.9,
+                        samples: 100
+                    });
+                    composer = new POSTPROCESSING.EffectComposer(renderer);
+                    let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+                    composer.addPass(renderPass);
+                    let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect);
+                    effectPass.renderToScreen = true;
+                    composer.addPass(effectPass);
+                    ok=1;
+                    }
+                    update();
+                })
+
                 transormation=gui.addFolder('Transformation');
                 transormation.add(rotation,'rotationX').min(0).max(360).onChange(function(newVal){
                     obj.rotation.x=newVal*Math.PI/180;
