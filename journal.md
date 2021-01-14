@@ -1,4 +1,4 @@
-# Diario del secondo progetto di Intercative 3d Graphics
+# Diario del secondo progetto di Interative 3d Graphics
 
 Il sito presenta una piccola sezione che contiene la scena con cui l'utente può interagire. Gli oggetti disponibili sono:
 - un'ascia;
