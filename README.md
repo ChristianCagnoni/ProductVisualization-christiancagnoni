@@ -78,8 +78,10 @@ Per la realizzazione del progetto, sono stati utilizzati i seguenti file:
 * `./lib/OrbitControls.js` -> libreria che consente di controllare la camera tramite mouse e tastiera;
 * `./lib/dat.gui.min.js` -> libreria che consente di aggiungere alla scena dei controlli configurabili dall'utente;
 * `./lib/GLTFLoader.js` -> libreria che consente di caricare un oggetto .gltf o .glb ed inserirlo nella scena;
-* `./lib/BufferGeometryUtils.js` -> libreria che consente di accedere a funzionalità utili per istanze di BufeerGeometry.
+* `./lib/BufferGeometryUtils.js` -> libreria che consente di accedere a funzionalità utili per istanze di BufeerGeometry;
+* `./lib/postprocessing.min.js` -> libreria che consente di accedere a funzionalità utili relative ad effetComposer, diversi passes e operazioni di postprocessing.
 
 # Crediti
 
 Le environment map è stata ottenuta dal sito https://hdrihaven.com/hdri/?c=night&h=moonlit_golf ed sono state create dall'utente Greg Zaal, Andreas Mischok, Morgan Evans. Per ottenere la cubemaps si è sfruttato la pagina https://matheowis.github.io/HDRI-to-CubeMap/ . Invece, le texture sono state scaricate dal sito https://cc0textures.com/ . I modelli 3d delle armi sono state realizzate tramite Blender. AO maps prodotte da https://cpetry.github.io/NormalMap-Online/ . Oltre alle texture scaricate, se ne è realizzata una con il software Materialize http://www.boundingboxsoftware.com/materialize/index.php .
+Per quanto riguarda la libreria `postprocessing.min.js` è stata ricavata da https://github.com/vanruesc/postprocessing .
