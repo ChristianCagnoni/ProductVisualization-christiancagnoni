@@ -1,4 +1,4 @@
-# ProductVisualization - Secondo progetto di Intercative 3d Graphics
+# ProductVisualization - Secondo progetto di Interactive 3d Graphics
 
 ![A small preview](screenshot/presentazione2.gif)
 
