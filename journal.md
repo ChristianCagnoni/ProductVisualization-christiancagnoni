@@ -39,11 +39,8 @@ All'interno della scena in cui l'utente può interagire con gli oggetti, sono st
 # Possibili modifiche
 
 La principale modifica da realizzare riguarda la spada piccola. Il motivo è semplice, ovvero non viene renderizzata tramite gli shaders. Questo problema è dovuto a come è stata realizzata. Infatti, invece di utilizzare il generico materiale BSDF di blender si è prima tentato di utilizzare glassBSDF e translucidBSDF, ma si è scoperto in seguito che l'esportazione di modelli, da blender, con queste caratteristiche non funziona correttamente. La prima soluzione, è stata utilizzare genericBSDF per tutti. Ma, usando la normale BRDF il modello non assumeva il colore corretto, ma veniva influenzato fortemente dalla luce ambientale. La soluzione applicata consiste nell'assegnare all'oggetto il suo materiale e aggiungere due luci alla scena, senza ricorrere ai due shaders.
-<<<<<<< HEAD
 
-Un'altra modifica è sorta in seguito all'introduzione dei raygods. Quando si applica questo effetto influisce su tutta la scena e quindi non applicabile a singolo oggetto, nonostante venga specificata questa operazione. Si è tentato in vari modi di risolvere il problema ma senza successo, in particolare:
+<s>Un'altra modifica è sorta in seguito all'introduzione dei raygods. Quando si applica questo effetto influisce su tutta la scena e quindi non applicabile a singolo oggetto, nonostante venga specificata questa operazione. Si è tentato in vari modi di risolvere il problema ma senza successo, in particolare:
 - scene multiple;
 - layers della camera;
-- combinazione dei due renderer;
-=======
->>>>>>> 4456195d1253fe7a88619a1157193e6d20487021
+- combinazione dei due renderer;<s>(risolto)
