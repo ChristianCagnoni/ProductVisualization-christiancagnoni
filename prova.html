@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+        <meta charset=UTF-8 />
+        <link rel="stylesheet" type="text/css" href="styles.css" />
+      </head>
+	<body>
+		<script src="libs/three.js"></script>
+		<script src="libs/stats.min.js"></script>
+		<script src="libs/OrbitControls.js"></script>
+		<script src='libs/dat.gui.min.js'></script>
+		<script src='libs/GLTFLoader.js'></script>
+        <script src='libs/BufferGeometryUtils.js'></script>
+        <script src='libs/Object3d.js'></script>
+        <script src='libs/postprocessing.min.js'></script>
+
+		<!-- shaders -->
+
+		<script type="text/x-glsl" id="vertex">
+		attribute vec4 tangent;
+		varying vec3 vNormal;
+        varying vec3 vPosition;
+        varying vec3 wPosition;
+		varying vec2 vUv;
+		varying vec3 vTangent;
+		varying vec3 vBitangent;
+
+		void main() {
+			vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+            vPosition = vPos.xyz;
+            wPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
+			vNormal = normalize(normalMatrix * normal);
+			vec3 objectTangent = vec3( tangent.xyz );
+			vec3 transformedTangent = normalMatrix * objectTangent;
+			vTangent = normalize( transformedTangent );
+			vBitangent = normalize( cross( vNormal, vTangent ) * tangent.w );
+			vUv = uv;
+			gl_Position = projectionMatrix * vPos;
+		}
+		</script>
+
+		<script type="text/x-glsl" id="fragment">
+			varying vec3 vNormal;
+			varying vec3 vTangent;
+			varying vec3 vBitangent;
+            varying vec3 vPosition;
+            varying vec3 wPosition;
+			varying vec2 vUv;
+			uniform vec3 clight;
+			uniform vec3 ambientLight;
+            uniform sampler2D normalMap;
+            uniform sampler2D roughnessMap;
+            uniform sampler2D specularMap;
+            uniform sampler2D metalnessMap;
+            uniform sampler2D diffuseMap;
+            uniform sampler2D AOMap;
+            uniform sampler2D glowMap;
+            uniform samplerCube envMap;
+            uniform vec2 textureRepeat;
+            uniform vec2 normalScale;
+            uniform vec3 pointLightPosition;
+            uniform float intensity;
+            uniform float em;
+            const float PI = 3.14159;
+            uniform vec3 emissiveC;
+            uniform float glass;
+            uniform float n1;
+			uniform float n2;
+            
+			
+			#define saturate(a) clamp( a, 0.0, 1.0 )
+
+            vec3 metalness;
+            vec3 cdiff;
+            vec3 cspec;
+            //vec3 pointLightPosition = vec3(0,15,0);
+			float roughness;
+			
+			vec3 getCSpec(vec3 albedo, vec3 metal){  
+				float r = max(metal.r, 0.2196) * albedo.r; //0.2196 e' #383838
+				float g = max(metal.g, 0.2196) * albedo.g;
+				float b = max(metal.b, 0.2196) * albedo.b;
+				return vec3(r,g,b);
+			}
+
+			float pow2( const in float x ) { return x*x; }
+
+			float getSpecularMIPLevel( const in float blinnShininessExponent, const in int maxMIPLevel ) {
+				float maxMIPLevelScalar = float( maxMIPLevel );
+				float desiredMIPLevel = maxMIPLevelScalar - 0.79248 - 0.5 * log2( pow2( blinnShininessExponent ) + 1.0 );
+				return clamp( desiredMIPLevel, 0.0, maxMIPLevelScalar );
+			}
+
+			float GGXRoughnessToBlinnExponent( const in float ggxRoughness ) {
+				return ( 2.0 / pow2( ggxRoughness + 0.0001 ) - 2.0 );
+			}
+
+			vec3 FSchlick(float vDoth, vec3 f0) {
+				return f0 + (vec3(1.0)-f0)*pow(1.0 - vDoth,5.0);
+			}
+
+			float DGGX(float NoH, float alpha) {
+				float alpha2 = alpha * alpha;
+				float k = NoH*NoH * (alpha2 - 1.0) + 1.0;
+    			return alpha2 / (PI * k * k );
+			}
+
+			float G1(float nDotv, float alpha) {
+				float alpha2 = alpha*alpha;
+				return 2.0 * (nDotv / (nDotv + sqrt(alpha2 + (1.0-alpha2)*nDotv*nDotv )));
+			}
+
+			float GSmith(float nDotv, float nDotl, float alpha) {
+				return G1(nDotl,alpha)*G1(nDotv,alpha);
+            }
+            
+            vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
+                return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
+			}
+			
+			vec3 BRDF_Specular_GGX_Environment( vec3 normal, vec3 viewDir, const in vec3 cspec, const in float roughness ) {
+
+				float dotNV = saturate( dot( normal, viewDir ) );
+				const vec4 c0 = vec4( - 1, - 0.0275, - 0.572, 0.022 );
+				const vec4 c1 = vec4( 1, 0.0425, 1.04, - 0.04 );
+				vec4 r = roughness * c0 + c1;
+				float a004 = min( r.x * r.x, exp2( - 9.28 * dotNV ) ) * r.x + r.y;
+				vec2 AB = vec2( -1.04, 1.04 ) * a004 + r.zw;
+				return cspec * AB.x + AB.y;
+
+			}
+
+			void main() {
+				vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+				vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+				vec3 normal = normalize( vNormal );
+				vec3 tangent = normalize( vTangent );
+				vec3 bitangent = normalize( vBitangent );
+				mat3 vTBN = mat3( tangent, bitangent, normal );
+				vec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;
+				vec3 n = normalize( vTBN * mapN );
+				vec3 v = normalize( -vPosition);
+				vec3 h = normalize( v + l);
+				float nDotl = max(dot( n, l ),0.000001);
+				float lDoth = max(dot( l, h ),0.000001);
+				float nDoth = max(dot( n, h ),0.000001);
+				float vDoth = max(dot( v, h ),0.000001);
+                float nDotv = max(dot( n, v ),0.000001);
+                vec3 worldN = inverseTransformDirection( n, viewMatrix );
+				vec3 worldV = cameraPosition - wPosition ;
+                vec3 r = normalize( reflect(-worldV,worldN));
+                vec3 fresnel = FSchlick(vDoth, cspec);
+                metalness = texture2D( metalnessMap, vUv*textureRepeat).rgb;
+				metalness = pow( metalness, vec3(2.2));
+                cdiff = texture2D( diffuseMap, vUv*textureRepeat ).rgb;
+				cdiff = pow( cdiff, vec3(2.2));
+				cspec = getCSpec(cdiff, metalness);
+				cdiff = cdiff*(vec3(1)-metalness);
+                roughness = texture2D( roughnessMap, vUv*textureRepeat).r;
+                vec3 outRadiance;
+                if(em>0.0){
+                    vec4 glow=texture2D(glowMap,vUv*textureRepeat)*30.0*2.0;
+                    glow.rgb*=emissiveC;
+                    vec3 luma = vec3( 0.299, 0.587, 0.114 );
+                    float lg = dot( glow.xyz, luma );
+                    vec4 outputColor = vec4( (texture2D(glowMap,vUv*textureRepeat)).rgb, 0.0 );
+                    float alphagl = smoothstep( 1.0, 1.0 + 1.0, lg );
+                    vec4 risult_int=mix( outputColor, glow, alphagl );
+                    outRadiance=risult_int.xyz;
+                }
+				float alpha = roughness * roughness;
+				float blinnShininessExponent = GGXRoughnessToBlinnExponent(roughness);
+				float specularMIPLevel = getSpecularMIPLevel(blinnShininessExponent, 8 );
+                vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz),specularMIPLevel).rgb;
+                envLight = pow( envLight, vec3(2.2));
+                if(glass>0.0){
+                    mapN.xy = normalScale * mapN.xy;
+                    vec3 rRifr = normalize( refract(-worldV,worldN,n1/n2));//3.0/3.0
+                    vec3 envLightRifr=textureCube( envMap, vec3(-rRifr.x, rRifr.yz)).rgb;
+                    envLightRifr = pow( envLightRifr, vec3(2.2));
+                    outRadiance=(vec3(1.0)-fresnel)*envLightRifr+fresnel*envLight;
+                }else{
+                outRadiance+=envLight*BRDF_Specular_GGX_Environment(n, v, cspec, roughness);
+                outRadiance = outRadiance + envLight*(cdiff*texture2D( AOMap, vUv ).xyz).xyz * 0.2;
+                //vec3 clight = vec3(0.95);
+                vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl, alpha)*DGGX(nDoth,alpha)/
+                    (4.0*nDotl*nDotv);
+                outRadiance = outRadiance + PI* clight * nDotl * BRDF;//*5.0
+                }
+				gl_FragColor = vec4(pow( outRadiance * intensity, vec3(1.0/2.2)), 1.0);
+			}
+        </script>
+
+		<!-- three.js code -->
+
+		<script>
+
+            //variabili per la gestione delle texture, dell'oggetto 3d, dei parametri d'interazione con l'utente
+			var renderer = new THREE.WebGLRenderer( { antialias: true } );
+			var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 50000 );
+			var controls = new THREE.OrbitControls( camera, renderer.domElement );
+			var scene = new THREE.Scene();
+            var obj=new THREE.Object3D();
+            var hemL;
+            var dirL;
+            var config=0;
+            scene.add(obj);  
+            var composer;
+            var ok=0;
+            var pass;
+
+            composer = new POSTPROCESSING.EffectComposer(renderer);
+            let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+            renderPass.renderToScreen = true;
+            composer.addPass(renderPass);
+
+			var normalMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+            var normalMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+            var normalMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+            var normalMap4 = loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+            var normalMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg" );
+            
+            var roughness1 = loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+            var roughness2 = loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+            var roughness3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+            var roughness4 = loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+            var roughness5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+            
+
+            var specularMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+            var specularMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+            var specularMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+            var specularMap4 = loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+            var specularMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+
+            var diffuseMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+            var diffuseMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+            var diffuseMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+            var diffuseMap4 = loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+            var diffuseMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+
+            var metalnessMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+            var metalnessMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+			var metalnessMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+            var metalnessMap4 = loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+			var metalnessMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+
+            var aoMap1 = loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+            var aoMap2 = loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+			var aoMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+            var aoMap4 = loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+			var aoMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+            
+            var glowMap = loadTexture( "textures/glow3.png" );
+            
+            var loader = new THREE.CubeTextureLoader();
+				loader.setPath( 'envMap/night meadow/' );
+
+				var textureCube = loader.load( [
+					'px.png', 'nx.png',
+					'py.png', 'ny.png',
+					'pz.png', 'nz.png'
+				] );
+				textureCube.minFilter = THREE.LinearMipMapLinearFilter;
+
+			scene.background = textureCube;
+
+            var oggetto = {
+				model: 'Axe'
+			}
+
+            var raygodsS={
+                ray:false,
+                dim:0
+            }
+
+            var material = {
+				texture1: 'MetalAxe',
+                texture2: 'GoldAxe',
+                texture3: 'WoodAxe',
+                texture4: '',
+                texture5: '',
+            }
+            
+            var rotation={
+                rotationX:0,
+                rotationY:0,
+                rotationZ:0
+            }
+
+            var scale={
+                scaleX:1,
+                scaleY:1,
+                scaleZ:1
+            }
+
+            var emissive={
+                red:1.0,
+                green:1.0,
+                blue:1.0
+            }
+
+            var textureParameters={
+                normalScale: 0.0,
+                nu:1.0,
+                nd:1.0
+            }
+
+            var traslate={
+                translateX:0,
+                translateY:0,
+                translateZ:0
+            }
+
+            var lightSettings={
+                x:0,
+                y:15,
+                z:0,
+                R:0.95,
+                G:0.95,
+                B:0.95,
+                intensity:5.0
+            }
+
+            var backgroundMap={
+                map:'Night Meadow'
+            }
+
+            var glass={
+                uno:0,
+                due:0,
+                tre:0,
+                quattro:1,
+                cinque:0
+            }
+
+            var em={
+                uno:0,
+                due:0,
+                tre:0,
+                quattro:0,
+                cinque:1
+            }
+
+            var objects=[];
+
+			var uniforms1 = {
+                    specularMap: { type: "t", value: specularMap1},
+                    diffuseMap:	{ type: "t", value: diffuseMap1},
+                    metalnessMap:	{ type: "t", value: metalnessMap1},
+				    roughnessMap: { type: "t", value: roughness1},
+					normalMap:	{ type: "t", value: normalMap1},
+                    AOMap: {type: "t", value: aoMap1},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.uno},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.uno}
+                    };
+            var uniforms2 = {
+                    specularMap: { type: "t", value: specularMap2},
+                    diffuseMap:	{ type: "t", value: diffuseMap2},
+                    metalnessMap:	{ type: "t", value: metalnessMap2},
+				    roughnessMap: { type: "t", value: roughness2},
+					normalMap:	{ type: "t", value: normalMap2},
+                    AOMap: {type: "t", value: aoMap2},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.due},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.due}
+                    };
+            var uniforms3 = {
+                    specularMap: { type: "t", value: specularMap3},
+					diffuseMap:	{ type: "t", value: diffuseMap3},
+					metalnessMap:	{ type: "t", value: metalnessMap3},
+				    roughnessMap: { type: "t", value: roughness3},
+					normalMap:	{ type: "t", value: normalMap3},
+                    AOMap: {type: "t", value: aoMap3},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.tre},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.tre}
+					};
+            var uniforms4 = {
+                    specularMap: { type: "t", value: specularMap4},
+					diffuseMap:	{ type: "t", value: diffuseMap4},
+					metalnessMap:	{ type: "t", value: metalnessMap4},
+				    roughnessMap: { type: "t", value: roughness4},
+					normalMap:	{ type: "t", value: normalMap4},
+                    AOMap: {type: "t", value: aoMap4},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.quattro},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.quattro}
+					};
+            var uniforms5 = {
+                    specularMap: { type: "t", value: specularMap5},
+					diffuseMap:	{ type: "t", value: diffuseMap5},
+					metalnessMap:	{ type: "t", value: metalnessMap5},
+				    roughnessMap: { type: "t", value: roughness5},
+					normalMap:	{ type: "t", value: normalMap5},
+                    AOMap: {type: "t", value: aoMap5},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.cinque},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.cinque}
+					};
+
+			vs = document.getElementById("vertex").textContent;
+			fs = document.getElementById("fragment").textContent;
+
+			var ourMaterial = [new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms2, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms3, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms4, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms5, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide })];
+			ourMaterial.vertexTangents = true;
+			ourMaterial.needsUpdate = true;
+			
+            //caricamento di default del primo modello (ascia)
+			var loader = new THREE.GLTFLoader();
+			loader.useIndices = true;
+            var emMesh;
+            var emMesh1;
+            var emMesh2;
+			loader.load( "models/axes5.glb", function ( model ) {
+					console.log(model);
+					geometry= model.scene.children[0].children[0].geometry;
+					geometry.center();
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+					emMesh1.position.x=0;
+					emMesh1.position.y=0;
+					emMesh1.position.z=0.92;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh1);
+					scene.add( emMesh1 );
+                    obj.add(emMesh1);
+
+					geometry= model.scene.children[0].children[1].geometry;
+					geometry.center();
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh2.scale.multiplyScalar( 0.1 );
+					emMesh2.position.x=0;
+					emMesh2.position.y=-0.015;
+					emMesh2.position.z=0.3925;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh2);
+                    scene.add( emMesh2 );
+                    obj.add(emMesh2);
+                    
+                    geometry= model.scene.children[0].children[2].geometry;
+					geometry.center();
+					emMesh = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh.scale.multiplyScalar( 0.1 );
+					emMesh.position.x=0;
+					emMesh.position.y=0;
+					emMesh.position.z=2;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
+				} );
+
+			var gui;
+			var stats = new Stats();
+
+			function loadTexture(file) {
+					var texture = new THREE.TextureLoader().load( file , function ( texture ) {
+
+						texture.minFilter = THREE.LinearMipMapLinearFilter;
+						texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+						texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    			  		texture.offset.set( 0, 0 );
+						texture.needsUpdate = true;
+						render();
+					} )
+					return texture;
+			}
+
+            //funzione che inizializza la scena
+			function init() {
+
+				renderer.autoClearColor=false;
+                renderer.autoClearDepth= true;
+                renderer.autoClearStencil= true;
+
+				camera.position.set( 0, 0, 10 );
+				scene.add( camera );
+
+				document.body.appendChild( renderer.domElement );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				controls.minDistance = 1;
+				controls.maxDistance = 100;
+				controls.enablePan = false;
+				controls.update();
+
+				window.addEventListener( 'resize', onResize, false );
+
+			    stats.domElement.style.position = 'absolute';
+			    stats.domElement.style.top = '0px';
+			    document.body.appendChild( stats.domElement );
+
+                ourMaterial.needsUpdate = true;
+
+			}
+
+            //funzioni che gestiscono il funzionamento generale
+			function onResize() {
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				camera.aspect = ( window.innerWidth / window.innerHeight );
+				camera.updateProjectionMatrix();
+
+			}
+
+			function update() {
+				requestAnimationFrame( update );
+				stats.update();
+				render();
+			}
+
+			function render() {
+                //renderer.render( scene, camera );
+
+                composer.render(new THREE.Clock().getDelta());
+
+                /*if(ok==1 && raygodsS.ray){
+                    renderer.clear();
+                    renderer.clearDepth();
+                    //composer1.render(0.1);
+                    composer.render(new THREE.Clock().getDelta());
+                    //composer2.render(0.1);
+                }else if(!raygodsS.ray){
+                    renderer.render( scene, camera );
+                }*/
+
+			}
+
+			function clearGui() {
+
+				if ( gui ) gui.destroy();
+				gui = new dat.GUI();
+				gui.open();
+
+			}
+
+			function buildGui() {
+
+				clearGui();
+                raygods=gui.addFolder('Ray Gods');
+                raygods.add(raygodsS,'dim').min(0).max(3).onChange(function(newVal){
+                    if(newVal<0.9999){
+                        newVal=0;
+                    }else if(newVal>=0.9999 && newVal<1.9999){
+                        newVal=1;
+                    }else if(newVal>=1.9999 && newVal<2.9999){
+                        newVal=2;
+                    }else{
+                        newVal=3;
+                    }
+                    raygodsS.dim=newVal;
+                });
+                raygods.add(raygodsS,'ray').onChange(function(newVal){
+                    raygodsS.ray=newVal;
+                    if(newVal){
+                        let areaImage = new Image();
+                    areaImage.src = POSTPROCESSING.SMAAEffect.areaImageDataURL;
+                    let searchImage = new Image();
+                    searchImage.src = POSTPROCESSING.SMAAEffect.searchImageDataURL;
+                    let smaaEffect = new POSTPROCESSING.SMAAEffect(searchImage,areaImage,1);
+                    let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, emMesh, {
+                        resolutionScale: 1,
+                        density: 0.8,
+                        decay: 0.95,
+                        weight: 0.9,
+                        samples: 100
+                    });
+                    let godraysEffect1 = new POSTPROCESSING.GodRaysEffect(camera, emMesh1, {
+                        resolutionScale: 1,
+                        density: 0.8,
+                        decay: 0.95,
+                        weight: 0.9,
+                        samples: 100
+                    });
+                    let godraysEffect2 = new POSTPROCESSING.GodRaysEffect(camera, emMesh2, {
+                        resolutionScale: 1,
+                        density: 0.8,
+                        decay: 0.95,
+                        weight: 0.9,
+                        samples: 100
+                    });
+                    pass=godraysEffect2;
+                    composer = new POSTPROCESSING.EffectComposer(renderer);
+                    let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+                    if(raygodsS.dim<1)renderPass.renderToScreen = true;
+                    composer.addPass(renderPass);
+                    if(raygodsS.dim==3){
+                        let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2);
+                        effectPass.renderToScreen = true;
+                        composer.addPass(effectPass);
+                    }else if(raygodsS.dim==1){
+                        let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect2);
+                        effectPass.renderToScreen = true;
+                        composer.addPass(effectPass);
+                    }else if(raygodsS.dim==2){
+                        let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect2);
+                        effectPass.renderToScreen = true;
+                        composer.addPass(effectPass);
+                    }
+                    ok=1;
+                    }else{
+                    composer = new POSTPROCESSING.EffectComposer(renderer);
+                    let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+                    renderPass.renderToScreen = true;
+                    composer.addPass(renderPass);
+                    emMesh.material.transparent=false;
+                    emMesh.material.depthWrite=true;
+                    emMesh1.material.transparent=false;
+                    emMesh1.material.depthWrite=true;
+                    emMesh2.material.transparent=false;
+                    emMesh2.material.depthWrite=true;
+                    }
+                })
+			}
+
+			init();
+			buildGui();
+			update();
+			render();
+
+        </script>
+	</body>
+</html>

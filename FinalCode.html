@@ -207,6 +207,16 @@
             scene.add(obj);  
             var composer;
             var ok=0;
+            var emMesh;
+            var emMesh1;
+            var emMesh2;
+            var emMesh3;
+            var emMesh4;
+
+            composer = new POSTPROCESSING.EffectComposer(renderer);
+            let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+            renderPass.renderToScreen = true;
+            composer.addPass(renderPass);
 
 			var normalMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
             var normalMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
@@ -264,7 +274,8 @@
 			}
 
             var raygodsS={
-                ray:false
+                ray:false,
+                effects:0
             }
 
             var material = {
@@ -461,39 +472,39 @@
 					console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=0;
-					mesh.position.z=0.92;
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
+					emMesh.position.x=0;
+					emMesh.position.y=0;
+					emMesh.position.z=0.92;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
 
 					geometry= model.scene.children[0].children[1].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[1]);
-					mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=-0.015;
-					mesh.position.z=0.3925;
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+					emMesh1.position.x=0;
+					emMesh1.position.y=-0.015;
+					emMesh1.position.z=0.3925;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-                    scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
                     
                     geometry= model.scene.children[0].children[2].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[2]);
-                    mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=0;
-					mesh.position.z=2;
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+					emMesh2.position.x=0;
+					emMesh2.position.y=0;
+					emMesh2.position.z=2;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
 				} );
 
             //definizione delle funzioni che caricano i 3 modelli 3d
@@ -504,39 +515,39 @@
 					console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=0;
-					mesh.position.z=0.92;
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
+					emMesh.position.x=0;
+					emMesh.position.y=0;
+					emMesh.position.z=0.92;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
 
 					geometry= model.scene.children[0].children[1].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[1]);
-					mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=-0.015;
-					mesh.position.z=0.3925;
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+					emMesh1.position.x=0;
+					emMesh1.position.y=-0.015;
+					emMesh1.position.z=0.3925;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-                    scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
                     
                     geometry= model.scene.children[0].children[2].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[2]);
-                    mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=0;
-					mesh.position.z=2;
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+					emMesh2.position.x=0;
+					emMesh2.position.y=0;
+					emMesh2.position.z=2;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
 				} );
                 if(config==1){
                     buildGui();
@@ -551,68 +562,68 @@
 					console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=0;
-					mesh.position.z=0;
-                    mesh.scale.y+=2.5;
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
+					emMesh.position.x=0;
+					emMesh.position.y=0;
+					emMesh.position.z=0;
+                    emMesh.scale.y+=2.5;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
 
 					geometry= model.scene.children[0].children[1].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[1]);
-					mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=0;
-					mesh.position.z=0;
-                    mesh.scale.y+=2.5;
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+					emMesh1.position.x=0;
+					emMesh1.position.y=0;
+					emMesh1.position.z=0;
+                    emMesh1.scale.y+=2.5;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-                    scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
                     
                     geometry= model.scene.children[0].children[2].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[2]);
-                    mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=0;
-					mesh.position.z=0;
-                    mesh.scale.y+=2.5;
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+					emMesh2.position.x=0;
+					emMesh2.position.y=0;
+					emMesh2.position.z=0;
+                    emMesh2.scale.y+=2.5;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
 
                     geometry= model.scene.children[0].children[3].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[3]);
-                    mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0;
-					mesh.position.y=0;
-					mesh.position.z=0;
-                    mesh.scale.y+=2.475;
+					emMesh3 = new THREE.Mesh(geometry,ourMaterial[3]);
+                    emMesh3.scale.multiplyScalar( 0.1 );
+					emMesh3.position.x=0;
+					emMesh3.position.y=0;
+					emMesh3.position.z=0;
+                    emMesh3.scale.y+=2.475;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh3);
+					scene.add( emMesh3 );
+                    obj.add(emMesh3);
 
                     geometry= model.scene.children[0].children[4].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[4]);
-                    mesh.scale.multiplyScalar( 0.1 );
-					mesh.position.x=0.05;
-					mesh.position.y=2.175;
-					mesh.position.z=-0.9;
-                    mesh.scale.y+=2.5;
+					emMesh4 = new THREE.Mesh(geometry,ourMaterial[4]);
+                    emMesh4.scale.multiplyScalar( 0.1 );
+					emMesh4.position.x=0.05;
+					emMesh4.position.y=2.175;
+					emMesh4.position.z=-0.9;
+                    emMesh4.scale.y+=2.5;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh4);
+					scene.add( emMesh4 );
+                    obj.add(emMesh4);
 				} );
                 if(config==1){
                     buildGui();
@@ -626,32 +637,32 @@
 					console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					mesh.scale.multiplyScalar( 0.1 );
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
 
 					geometry= model.scene.children[0].children[1].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[1]);
-					mesh.scale.multiplyScalar( 0.1 );
-                    mesh.position.x+=0.23;
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+                    emMesh1.position.x+=0.23;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-                    scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
                     
                     geometry= model.scene.children[0].children[2].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[2]);
-                    mesh.scale.multiplyScalar( 0.1 );
-                    mesh.position.x+=0.128;
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+                    emMesh2.position.x+=0.128;
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
 				} );
                 if(config==1){
                     buildGui();
@@ -665,35 +676,35 @@
 					console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					mesh.scale.multiplyScalar( 0.1 );
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    mesh.rotation.y+=90*Math.PI/180;
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    emMesh.rotation.y+=90*Math.PI/180;
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
 
 					geometry= model.scene.children[0].children[1].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[1]);
-                    mesh.scale.multiplyScalar( 0.1 );
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+                    emMesh1.scale.multiplyScalar( 0.1 );
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    mesh.position.y-=1.0455;
-                    mesh.rotation.y+=90*Math.PI/180;
-                    objects.push(mesh);
-                    scene.add( mesh );
-                    obj.add(mesh);
+                    emMesh1.position.y-=1.0455;
+                    emMesh1.rotation.y+=90*Math.PI/180;
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
                     
                     geometry= model.scene.children[0].children[2].geometry;
 					geometry.center();
-					mesh = new THREE.Mesh(geometry,ourMaterial[2]);
-                    mesh.scale.multiplyScalar( 0.1 );
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
 					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    mesh.position.y-=1.09;
-                    mesh.rotation.y+=90*Math.PI/180;
-                    objects.push(mesh);
-					scene.add( mesh );
-                    obj.add(mesh);
+                    emMesh2.position.y-=1.09;
+                    emMesh2.rotation.y+=90*Math.PI/180;
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
 				} );
                 if(config==1){
                     buildGui();
@@ -827,7 +838,9 @@
             //funzione che inizializza la scena
 			function init() {
 
-				renderer.setClearColor( 0xf0f0f0 );
+				renderer.autoClearColor=false;
+                renderer.autoClearDepth= true;
+                renderer.autoClearStencil= true;
 
 				camera.position.set( 0, 0, 10 );
 				scene.add( camera );
@@ -869,14 +882,16 @@
 			function render() {
                 //renderer.render( scene, camera );
 
-                if(ok==1 && raygodsS.ray){
+                /*if(ok==1 && raygodsS.ray){
                     renderer.clear();
                     composer.render(0.1);
                     stats.update();
                 }else if(!raygodsS.ray){
                     renderer.clearDepth();
                     renderer.render( scene, camera );
-                }
+                }*/
+
+                composer.render(new THREE.Clock().getDelta());
 
 			}
 
@@ -1035,32 +1050,6 @@
                         textureSelection.updateDisplay();
                     }
                 });
-                raygods=gui.addFolder('Ray Gods');
-                raygods.add(raygodsS,'ray').onChange(function(newVal){
-                    raygodsS.ray=newVal;
-                    if(newVal){
-                        let areaImage = new Image();
-                    areaImage.src = POSTPROCESSING.SMAAEffect.areaImageDataURL;
-                    let searchImage = new Image();
-                    searchImage.src = POSTPROCESSING.SMAAEffect.searchImageDataURL;
-                    let smaaEffect = new POSTPROCESSING.SMAAEffect(searchImage,areaImage,1);
-                    let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, objects[objects.length-1], {
-                        resolutionScale: 1,
-                        density: 0.8,
-                        decay: 0.95,
-                        weight: 0.9,
-                        samples: 100
-                    });
-                    composer = new POSTPROCESSING.EffectComposer(renderer);
-                    let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
-                    composer.addPass(renderPass);
-                    let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect);
-                    effectPass.renderToScreen = true;
-                    composer.addPass(effectPass);
-                    ok=1;
-                    }
-                    update();
-                })
                 transormation=gui.addFolder('Transformation');
                 transormation.add(rotation,'rotationX').min(0).max(360).onChange(function(newVal){
                     obj.rotation.x=newVal*Math.PI/180;
@@ -1639,30 +1628,185 @@
                 });
 
                 raygods=gui.addFolder('Ray Gods');
+                raygods.add(raygodsS,'effects').min(0).max(5).onChange(function(newVal){
+                    if(newVal<0.9999){
+                        newVal=0;
+                    }else if(newVal>=0.9999 && newVal<1.9999){
+                        newVal=1;
+                    }else if(newVal>=1.9999 && newVal<2.9999){
+                        newVal=2;
+                    }else if(newVal>=2.9999 && newVal<3.9999){
+                        newVal=3;
+                    }else if(newVal>=3.9999 && newVal<4.9999){
+                        newVal=4;
+                    }else{
+                        newVal=5;
+                    }
+                    raygodsS.effects=newVal;
+                });
                 raygods.add(raygodsS,'ray').onChange(function(newVal){
                     raygodsS.ray=newVal;
                     if(newVal){
                         let areaImage = new Image();
-                    areaImage.src = POSTPROCESSING.SMAAEffect.areaImageDataURL;
-                    let searchImage = new Image();
-                    searchImage.src = POSTPROCESSING.SMAAEffect.searchImageDataURL;
-                    let smaaEffect = new POSTPROCESSING.SMAAEffect(searchImage,areaImage,1);
-                    let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, objects[objects.length-1], {
-                        resolutionScale: 1,
-                        density: 0.8,
-                        decay: 0.95,
-                        weight: 0.9,
-                        samples: 100
-                    });
-                    composer = new POSTPROCESSING.EffectComposer(renderer);
-                    let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
-                    composer.addPass(renderPass);
-                    let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect);
-                    effectPass.renderToScreen = true;
-                    composer.addPass(effectPass);
-                    ok=1;
+                        areaImage.src = POSTPROCESSING.SMAAEffect.areaImageDataURL;
+                        let searchImage = new Image();
+                        searchImage.src = POSTPROCESSING.SMAAEffect.searchImageDataURL;
+                        let smaaEffect = new POSTPROCESSING.SMAAEffect(searchImage,areaImage,1);
+                        let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, emMesh, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        });
+                        let godraysEffect1 = new POSTPROCESSING.GodRaysEffect(camera, emMesh1, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        });
+                        let godraysEffect2 = new POSTPROCESSING.GodRaysEffect(camera, emMesh2, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        });
+                        let godraysEffect3;
+                        let godraysEffect4;
+                        if(oggetto.model=='Sickle'){
+                            godraysEffect3 = new POSTPROCESSING.GodRaysEffect(camera, emMesh3, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        });
+                        godraysEffect4 = new POSTPROCESSING.GodRaysEffect(camera, emMesh4, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        }); 
+                        }
+                        composer = new POSTPROCESSING.EffectComposer(renderer);
+                        let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+                        if(raygodsS.effects<1)renderPass.renderToScreen = true;
+                        composer.addPass(renderPass);
+                        if(raygodsS.effects==3){
+                            let effectPass;
+                            if(oggetto.model!='Sickle'){ 
+                               effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2);
+                            }else{
+                                effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect4);
+                            }
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if(raygodsS.effects==1){
+                            let effectPass;
+                            if(oggetto.model!='Sickle'){ 
+                               effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect2);
+                            }else{
+                                effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect4);
+                            }
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if(raygodsS.effects==2){
+                            let effectPass;
+                            if(oggetto.model!='Sickle'){ 
+                               effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect1,godraysEffect2);
+                            }else{
+                                effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect1,godraysEffect4);
+                            }
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if (oggetto.model=='Sickle' && raygodsS.effects==4){
+                            let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2,godraysEffect4);
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if (oggetto.model=='Sickle' && raygodsS.effects==5){
+                            let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2,godraysEffect3,godraysEffect4);
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if (oggetto.model!='Sickle' && raygodsS.effects==4){
+                            let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2);
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if (oggetto.model!='Sickle' && raygodsS.effects==5){
+                            let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2);
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }
+                        if(oggetto.model!='Sickle'){
+                            if(raygodsS.effects<1){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh1.material.transparent=false;
+                                emMesh1.material.depthWrite=true;
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                            }else if(raygodsS.effects==1){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh1.material.transparent=false;
+                                emMesh1.material.depthWrite=true;
+                            }else if(raygodsS.effects==2){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                            }
+                        }else{
+                            if(raygodsS.effects<1){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh1.material.transparent=false;
+                                emMesh1.material.depthWrite=true;
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                                emMesh4.material.transparent=false;
+                                emMesh4.material.depthWrite=true;
+                            }else if(raygodsS.effects==1){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh1.material.transparent=false;
+                                emMesh1.material.depthWrite=true;
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                            }else if(raygodsS.effects==2){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                            }else if(raygodsS.effects==3){
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                            }else if(raygodsS.effects==4){
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                            }
+                        }
+                        ok=1;
+                    }else{
+                        composer = new POSTPROCESSING.EffectComposer(renderer);
+                        let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+                        renderPass.renderToScreen = true;
+                        composer.addPass(renderPass);
+                        emMesh.material.transparent=false;
+                        emMesh.material.depthWrite=true;
+                        emMesh1.material.transparent=false;
+                        emMesh1.material.depthWrite=true;
+                        emMesh2.material.transparent=false;
+                        emMesh2.material.depthWrite=true;
                     }
-                    update();
                 })
 
                 transormation=gui.addFolder('Transformation');
