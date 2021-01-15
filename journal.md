@@ -1,4 +1,4 @@
-# Diario del secondo progetto di Intercative 3d Graphics
+# Diario del secondo progetto di Interactive 3d Graphics
 
 Il sito presenta una piccola sezione che contiene la scena con cui l'utente può interagire. Gli oggetti disponibili sono:
 - un'ascia;
@@ -29,8 +29,6 @@ Per quanto riguarda la BRDF utilizzata, è stata trovata andando a cercare tipol
 
 Oltre a questo è stato aggiunto un elemento emissivo per quanto riguarda la parte interna della lama della falce. Inoltre le due lame della falce e le due punte sono state realizzate considerando la rifrazione per dare l'effetto che sembrino in vetro
 
-In seguito, tramite l'utilizzo della libreria `postprocessing.min.js`, è stata inserita la possibilità di passare da un normale rendering classico a quello fornito dall'EffectComposer. Questo ha permesso l'introduzione di nuovi effetti particolari, come ad esempio i raygods.
-
 
 # Controlli utente
 
@@ -39,8 +37,3 @@ All'interno della scena in cui l'utente può interagire con gli oggetti, sono st
 # Possibili modifiche
 
 La principale modifica da realizzare riguarda la spada piccola. Il motivo è semplice, ovvero non viene renderizzata tramite gli shaders. Questo problema è dovuto a come è stata realizzata. Infatti, invece di utilizzare il generico materiale BSDF di blender si è prima tentato di utilizzare glassBSDF e translucidBSDF, ma si è scoperto in seguito che l'esportazione di modelli, da blender, con queste caratteristiche non funziona correttamente. La prima soluzione, è stata utilizzare genericBSDF per tutti. Ma, usando la normale BRDF il modello non assumeva il colore corretto, ma veniva influenzato fortemente dalla luce ambientale. La soluzione applicata consiste nell'assegnare all'oggetto il suo materiale e aggiungere due luci alla scena, senza ricorrere ai due shaders.
-
-Un'altra modifica è sorta in seguito all'introduzione dei raygods. Quando si applica questo effetto influisce su tutta la scena e quindi non applicabile a singolo oggetto, nonostante venga specificata questa operazione. Si è tentato in vari modi di risolvere il problema ma senza successo, in particolare:
-- scene multiple;
-- layers della camera;
-- combinazione dei due renderer;
