@@ -161,9 +161,9 @@
                     vec4 glow=texture2D(glowMap,vUv*textureRepeat)*30.0*2.0;
                     glow.rgb*=emissiveC;
                     vec3 luma = vec3( 0.299, 0.587, 0.114 );
-                    float lg = dot( glow.xyz, luma );
+                    float lg = dot( glow.xyz, luma );//calcolo luminanza Digital ITU BT.601 https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color
                     vec4 outputColor = vec4( (texture2D(glowMap,vUv*textureRepeat)).rgb, 0.0 );
-                    float alphagl = smoothstep( 1.0, 1.0 + 1.0, lg );
+                    float alphagl = smoothstep( 1.0, 1.0 + 1.0, lg );//https://en.wikipedia.org/wiki/Smoothstep
                     vec4 risult_int=mix( outputColor, glow, alphagl );
                     outRadiance=risult_int.xyz;
                 }
