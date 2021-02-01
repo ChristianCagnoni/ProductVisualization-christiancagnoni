@@ -94,6 +94,10 @@ button {
     padding: 0 8px;
 }
 
+button:active{
+    background-color:rgb(44, 7, 146);
+ }
+
 #webgl-canvas {
     display: block;
     background-color: #330000; /* Will display red background if something went wrong during context creation */
