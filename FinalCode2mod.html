@@ -58,7 +58,7 @@
 					<div id="product" class="row padding">
                         <canvas id="productCanvas" style="padding-bottom: 15px; padding-left: 15px; float: left; display: block;">                            
                         </canvas>
-                        <div class="container-fluid" style="padding-bottom: 110.5px; padding-top:96.5px;padding-right: 42.5%; float: right; display: block">
+                        <div class="container-fluid" style="padding-bottom: 110.5px; padding-top:0px;padding-right: 42.5%; float: right; display: block">
                             <div class="row-padding">
                                 <header class="container-fluid-padding right-half">
                                     <h5 id="name-one">
@@ -75,6 +75,8 @@
                                         <option value="silverSword">Silver</option>
                                         <option value="redSword">Fabric Red</option>
                                         <option value="goldCasual">Modified Gold</option>
+                                        <option id="glass" value="glass">Glass</option>
+                                        <option id="glow" value="glow">Glow</option>
                                     </select>
                                     <h5 id="name-two">
                                         Blade Material
@@ -90,6 +92,8 @@
                                         <option value="silverSword">Silver</option>
                                         <option value="redSword">Fabric Red</option>
                                         <option value="goldCasual">Modified Gold</option>
+                                        <option id="glass1" value="glass">Glass</option>
+                                        <option id="glow1" value="glow">Glow</option>
                                     </select>
                                     <h5 id="name-three">
                                         Wedge Material
@@ -105,6 +109,42 @@
                                         <option value="silverSword">Silver</option>
                                         <option value="redSword">Fabric Red</option>
                                         <option value="goldCasual">Modified Gold</option>
+                                        <option id="glass2" value="glass">Glass</option>
+                                        <option id="glow2" value="glow">Glow</option>
+                                    </select>
+                                    <h5 id="name-four">
+                                        
+                                    <h5>
+                                    <select id="material4" hidden=true onchange="changeM4(value)">
+                                        <option value="metalAxe">Metal one</option>
+                                        <option selected value="goldAxe">Gold</option>
+                                        <option value="woodAxe">Wood</option>
+                                        <option value="blueShield">Metal Blue</option>
+                                        <option value="greenShield">Metal Green</option>
+                                        <option value="redShield">Metal Red</option>
+                                        <option value="goldSword">Gold Two</option>
+                                        <option value="silverSword">Silver</option>
+                                        <option value="redSword">Fabric Red</option>
+                                        <option value="goldCasual">Modified Gold</option>
+                                        <option id="glass3" value="glass">Glass</option>
+                                        <option id="glow3" value="glow">Glow</option>
+                                    </select>
+                                    <h5 id="name-five">
+                                        
+                                    <h5>
+                                    <select id="material5" hidden=true onchange="changeM5(value)">
+                                        <option value="metalAxe">Metal one</option>
+                                        <option value="goldAxe">Gold</option>
+                                        <option selected value="woodAxe">Wood</option>
+                                        <option value="blueShield">Metal Blue</option>
+                                        <option value="greenShield">Metal Green</option>
+                                        <option value="redShield">Metal Red</option>
+                                        <option value="goldSword">Gold Two</option>
+                                        <option value="silverSword">Silver</option>
+                                        <option value="redSword">Fabric Red</option>
+                                        <option value="goldCasual">Modified Gold</option>
+                                        <option id="glass4" value="glass">Glass</option>
+                                        <option id="glow4" value="glow">Glow</option>
                                     </select>
                                     <h5>
                                         Animated Material
@@ -135,10 +175,14 @@
                     uniforms1.animEn.value=2.5;
                     uniforms2.animEn.value=2.5;
                     uniforms3.animEn.value=2.5;
+                    uniforms4.animEn.value=2.5;
+                    uniforms5.animEn.value=2.5;
                 }else{
                     uniforms1.animEn.value=0.0;
                     uniforms2.animEn.value=0.0;
                     uniforms3.animEn.value=0.0;
+                    uniforms4.animEn.value=0.0;
+                    uniforms5.animEn.value=0.0;
                 }
             }
 
@@ -167,6 +211,16 @@
                 var iem=document.getElementById("iem");
                 var prod=document.getElementById("products").value;
                 if(iem.checked==true){
+                    document.getElementById("glass").disabled=true;
+                    document.getElementById("glow").disabled=true;
+                    document.getElementById("glass1").disabled=true;
+                    document.getElementById("glow1").disabled=true;
+                    document.getElementById("glass2").disabled=true;
+                    document.getElementById("glow2").disabled=true;
+                    document.getElementById("glass3").disabled=true;
+                    document.getElementById("glow3").disabled=true;
+                    document.getElementById("glass4").disabled=true;
+                    document.getElementById("glow4").disabled=true;
                     emMesh.material=altMaterial[0];
                     emMesh1.material=altMaterial[1];
                     emMesh2.material=altMaterial[2];
@@ -175,6 +229,16 @@
                         emMesh4.material=altMaterial[4];
                     }
                 }else{
+                    document.getElementById("glass").disabled=false;
+                    document.getElementById("glow").disabled=false;
+                    document.getElementById("glass1").disabled=false;
+                    document.getElementById("glow1").disabled=false;
+                    document.getElementById("glass2").disabled=false;
+                    document.getElementById("glow2").disabled=false;
+                    document.getElementById("glass3").disabled=false;
+                    document.getElementById("glow3").disabled=false;
+                    document.getElementById("glass4").disabled=false;
+                    document.getElementById("glow4").disabled=false;
                     emMesh.material=ourMaterial[0];
                     emMesh1.material=ourMaterial[1];
                     emMesh2.material=ourMaterial[2];
@@ -194,12 +258,17 @@
                 var nameo= document.getElementById("name-one");
                 var namet= document.getElementById("name-two");
                 var nameth= document.getElementById("name-three");
+                var namef= document.getElementById("name-four");
+                var namefi= document.getElementById("name-five");
                 var text1=document.getElementById("text1");
                 var text2=document.getElementById("text2");
                 var text3=document.getElementById("text3");
                 var text4=document.getElementById("text4");
                 var price=document.getElementById("price");
                 var anim=document.getElementById("animated");
+                var iem=document.getElementById("iem");
+                iem.checked=false;
+
                 
                 if(x=="axe"){
                     anim.disabled=false;
@@ -234,9 +303,13 @@
                         mat1.value="metalAxe";
                         mat2.value="goldAxe";
                         mat3.value="woodAxe";
+                        mat4.hidden=true;
+                        mat5.hidden=true;
                         nameo.textContent="Handle Material";
                         namet.textContent="Blade Material";
                         nameth.textContent="Wedge Material";
+                        namef.textContent="";
+                        namefi.textContent="";
                         text1.textContent="to the ax, designed to cut down trees, the battle ax, designed to hit the opponent's arms or legs, has a lighter and more curved metal head.";
                         text2.textContent="weapon, depending on its size, could be wielded with one or two hands and was intended either to guarantee the possibility of fast and repeated attacks or powerful attacks, aimed at knocking down or weakening the opponent.";
                         text3.textContent="The battle axes with a half-moon metal head, widespread in Europe during the Roman period, were usually made of wrought iron with a carbon steel edge or, typical of medieval axes, of pure steel.";
@@ -275,9 +348,13 @@
                         mat1.value="blueShield";
                         mat2.value="redShield";
                         mat3.value="greenShield";
+                        mat4.hidden=true;
+                        mat5.hidden=true;
                         nameo.textContent="Handle Material";
                         namet.textContent="Front Material";
                         nameth.textContent="Back Material";
+                        namef.textContent="";
+                        namefi.textContent="";
                         text1.textContent="The shield is a white weapon dedicated to the active protection of the bearer, that is, voluntarily used to parry, in support of other possible defensive measures (armor, helmet, etc.)";
                         text2.textContent="It consists of a plate of different shapes and materials braced to actively defend against the blows of the opponents.";
                         text3.textContent="Although some primitive populations still use it, it has not been used in warfare since the introduction of firearms, capable of piercing any shield a man could carry during battle, with the only isolated case of the small and heavy targe. ";
@@ -316,17 +393,20 @@
                         mat1.value="goldSword";
                         mat2.value="silverSword";
                         mat3.value="redSword";
+                        mat4.hidden=true;
+                        mat5.hidden=true;
                         nameo.textContent="Blade Material";
                         namet.textContent="Crock Knob Material";
                         nameth.textContent="Hilt Material";
+                        namef.textContent="";
+                        namefi.textContent="";
                         text1.textContent="A sword is a long-bladed white weapon, often (but not always) double-edged, suitable for striking with the point and cutting edge and used by the most various civilizations in every place of the world and in every era, although mainly in Eurasia and in North Africa.";
                         text2.textContent="It is composed, in its basic structure, of a long blade and the hilt, that is the handle (sleeve) and the guard.";
                         text3.textContent="The intention and the basic physics of the sword have remained substantially unchanged over the centuries but the manufacturing techniques have changed a lot, also varying according to the culture: as a consequence, there are differences in the design and purpose of the blade.";
                         text4.textContent="The fundamental concept behind the weapon is constant, but the techniques of use and the shape itself vary widely across the ages and in the various cultures that use it.";
                         price.textContent="78$"
                     }else{
-                        anim.disabled=true;
-                        anim.checked=false;
+                        anim.disabled=false;
                         for(var i=0;i<objects.length;i++){
                             scene.remove(objects[i]);
                             obj.remove(objects[i]);
@@ -370,9 +450,15 @@
                         mat1.value="redSword";
                         mat2.value="silverSword";
                         mat3.value="metalAxe";
+                        mat4.hidden=false;
+                        mat4.value="goldSword";
+                        mat5.hidden=false;
+                        mat5.value="redShield";
                         nameo.textContent="Handle Material";
                         namet.textContent="Tube Material";
                         nameth.textContent="Stem Material";
+                        namef.textContent="Blade Material";
+                        namefi.textContent="Internal Blade Material";
                         text1.textContent="The first people of antiquity to make systematic use of the scythe as a weapon of war were the Thracians.";
                         text2.textContent="The types of curved blade weapons, sharpened on the concave side, developed by this population were many: the real war sickle, the romfaia, a weapon attached to a sickle blade but with a curvature not as marked as the war sickle, and the sica, a kind of war sickle.";
                         text3.textContent="The Persians instead mounted sickle blades on the wheels of their chariots, creating the scythed chariots to try to balance the balance of forces between cavalry and infantry put in crisis by the heavy infantry of the Greeks, the hoplitic phalanx. However, the overwhelming victory of Alexander the Great in the Battle of Gaugamela (331 BC) showed that the age of war chariots had definitively ended.";
@@ -616,6 +702,13 @@
 
         <script>
             function changeM1(x){
+                if(x!='glass' && x!='glow'){
+                    if(document.getElementById("iem").checked==true){
+                        emMesh.material=altMaterial[0];
+                    }else{
+                        emMesh.material=ourMaterial[0];
+                    }
+                }
                 if(x=='metalAxe'){
                         uniforms1.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms1.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -672,6 +765,12 @@
                         uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(x=='glass'){
+                        glassMaterial.uniforms=uniforms1;
+                        emMesh.material=glassMaterial;
+                    }else if(x=='glow'){
+                        glowMaterial.uniforms=uniforms1;
+                        emMesh.material=glowMaterial;
                     }else if(x=='goldCasual'){
                         uniforms1.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms1.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -690,6 +789,13 @@
             }
 
             function changeM2(x){
+                if(x!='glass' && x!='glow'){
+                    if(document.getElementById("iem").checked==true){
+                        emMesh1.material=altMaterial[1];
+                    }else{
+                        emMesh1.material=ourMaterial[1];
+                    }
+                }
                 if(x=='metalAxe'){
                         uniforms2.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms2.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -746,6 +852,12 @@
                         uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(x=='glass'){
+                        glassMaterial.uniforms=uniforms2;
+                        emMesh1.material=glassMaterial;
+                    }else if(x=='glow'){
+                        glowMaterial.uniforms=uniforms2;
+                        emMesh1.material=glowMaterial;
                     }else if(x=='goldCasual'){
                         uniforms2.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms2.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -764,6 +876,13 @@
             }
 
             function changeM3(x){
+                if(x!='glass' && x!='glow'){
+                    if(document.getElementById("iem").checked==true){
+                        emMesh2.material=altMaterial[2];
+                    }else{
+                        emMesh2.material=ourMaterial[2];
+                    }
+                }
                 if(x=='metalAxe'){
                         uniforms3.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -820,6 +939,12 @@
                         uniforms3.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms3.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms3.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(x=='glass'){
+                        glassMaterial.uniforms=uniforms3;
+                        emMesh2.material=glassMaterial;
+                    }else if(x=='glow'){
+                        glowMaterial.uniforms=uniforms3;
+                        emMesh2.material=glowMaterial;
                     }else if(x=='goldCasual'){
                         uniforms3.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms3.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -838,6 +963,13 @@
             }
 
             function changeM4(x){
+                if(x!='glass' && x!='glow'){
+                    if(document.getElementById("iem").checked==true){
+                        emMesh3.material=altMaterial[3];
+                    }else{
+                        emMesh3.material=ourMaterial[3];
+                    }
+                }
                 if(x=='metalAxe'){
                         uniforms4.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms4.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -894,6 +1026,12 @@
                         uniforms4.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms4.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(x=='glass'){
+                        glassMaterial.uniforms=uniforms4;
+                        emMesh3.material=glassMaterial;
+                    }else if(x=='glow'){
+                        glowMaterial.uniforms=uniforms4;
+                        emMesh3.material=glowMaterial;
                     }else if(x=='goldCasual'){
                         uniforms4.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms4.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -912,6 +1050,13 @@
             }
 
             function changeM5(x){
+                if(x!='glass' && x!='glow'){
+                    if(document.getElementById("iem").checked==true){
+                        emMesh4.material=altMaterial[4];
+                    }else{
+                        emMesh4.material=ourMaterial[4];
+                    }
+                }
                 if(x=='metalAxe'){
                         uniforms5.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms5.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -968,6 +1113,12 @@
                         uniforms5.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
                         uniforms5.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms5.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(x=='glass'){
+                        glassMaterial.uniforms=uniforms5;
+                        emMesh4.material=glassMaterial;
+                    }else if(x=='glow'){
+                        glowMaterial.uniforms=uniforms5;
+                        emMesh4.material=glowMaterial;
                     }else if(x=='goldCasual'){
                         uniforms5.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms5.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -1125,12 +1276,9 @@
                 vec3 worldN = inverseTransformDirection( n, viewMatrix );
 				vec3 worldV = cameraPosition - wPosition ;
                 vec3 r = normalize( reflect(-worldV,worldN));
-                vec3 fresnel = FSchlick(vDoth, cspec);
                 metalness = texture2D( metalnessMap, vUv*textureRepeat).rgb;
                 metalness = pow( metalness, vec3(2.2));
-
                 if(animEn>0.5){
-
                     vec2 uvTimeShift = vUv + vec2( -2.5, 1.5 ) * time * speed;	
                     vec4 noiseGeneratorTimeShift = texture2D( noiseTexture, uvTimeShift );
                     vec2 uvNoiseTimeShift = vUv + 0.5 * vec2( noiseGeneratorTimeShift.r, noiseGeneratorTimeShift.b );
@@ -1138,49 +1286,22 @@
                 }else{
                     cdiff=texture2D( diffuseMap, vUv*textureRepeat ).rgb;
                 }
-
 				cdiff = pow( cdiff, vec3(2.2));
 				cspec = getCSpec(cdiff, metalness);
 				cdiff = cdiff*(vec3(1)-metalness);
                 roughness = texture2D( roughnessMap, vUv*textureRepeat).r;
+                vec3 fresnel = FSchlick(vDoth, cspec);
                 vec3 outRadiance;
-
-                //https://github.com/mistic100/three.js-examples/blob/master/examples/js/shaders/LuminosityHighPassShader.js
-                if(em>0.0){
-                    vec4 glow=texture2D(glowMap,vUv*textureRepeat)*30.0*2.0;
-                    glow.rgb*=emissiveC;
-                    vec3 luma = vec3( 0.299, 0.587, 0.114 );
-                    float lg = dot( glow.xyz, luma );//calcolo luminanza Digital ITU BT.601 https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color
-                    vec4 outputColor = vec4( (texture2D(diffuseMap,vUv*textureRepeat)).rgb, 1.0 );
-                    float alphagl = smoothstep( 2.0, 3.0, lg );//https://en.wikipedia.org/wiki/Smoothstep
-                    //se lg<2.0-->outputcolor se lg>3.0-->glow
-
-                    //float alphagl = clamp((lg - 1.0) / (2.0 - 1.0), 0.0, 1.0);
-                    //alphagl= alphagl * alphagl * (3.0 - 2.0 * alphagl);
-                    
-                    vec4 risult_int=mix( outputColor, glow, alphagl );//interpola outputcolor e glow con valore alphagl
-                    outRadiance=risult_int.xyz;
-                }
 				float alpha = roughness * roughness;
 				float blinnShininessExponent = GGXRoughnessToBlinnExponent(roughness);
 				float specularMIPLevel = getSpecularMIPLevel(blinnShininessExponent, 8 );
                 vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz),specularMIPLevel).rgb;
                 envLight = pow( envLight, vec3(2.2));
-                if(glass>0.0){
-                    mapN.xy = normalScale * mapN.xy;
-                    vec3 rRifr = normalize( refract(-worldV,worldN,1.0/2.42));//n1/n2-->3.0/3.0
-                    vec3 envLightRifr=textureCube( envMap, vec3(-rRifr.x, rRifr.yz)).rgb;
-                    envLightRifr = pow( envLightRifr, vec3(2.2));
-                    outRadiance=(vec3(1.0)-fresnel)*envLightRifr+fresnel*envLight;
-                }else{
-                    outRadiance+=envLight*BRDF_Specular_GGX_Environment(n, v, cspec, roughness);
-                    outRadiance = outRadiance + envLight*(cdiff*texture2D( AOMap, vUv ).xyz).xyz * 0.2;
-                    //vec3 clight = vec3(0.95);
-                    vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl, alpha)*DGGX(nDoth,alpha)/
-                        (4.0*nDotl*nDotv);
-                    outRadiance = outRadiance + PI* clight * nDotl * BRDF;//*5.0
-                }
-
+                outRadiance+=envLight*BRDF_Specular_GGX_Environment(n, v, cspec, roughness);
+                outRadiance = outRadiance + envLight*(cdiff*texture2D( AOMap, vUv ).xyz).xyz * 0.2;
+                vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl, alpha)*DGGX(nDoth,alpha)/
+                    (4.0*nDotl*nDotv);
+                outRadiance = outRadiance + PI* clight * nDotl * BRDF;//*5.0
 				gl_FragColor = vec4(pow( outRadiance * intensity, vec3(1.0/2.2)), 1.0);
 			}
         </script>
@@ -1196,6 +1317,12 @@
             uniform sampler2D normalMap;
             uniform samplerCube irradianceMap;
             uniform vec2 textureRepeat;
+            uniform float intensity;
+
+            uniform sampler2D noiseTexture;
+            uniform float time;
+            float speed=0.25;
+            uniform float animEn;
 
             vec3 cdiff;
             
@@ -1217,11 +1344,156 @@
 				vec3 r = normalize( reflect(-worldV,worldN));
 				float nDotv = max(dot( n, v ),0.000001);
 				vec3 irradiance = textureCube( irradianceMap, worldN).rgb;
-				irradiance = pow( irradiance, vec3(2.2));
-				cdiff = texture2D( diffuseMap, vUv  *textureRepeat).rgb;
+                irradiance = pow( irradiance, vec3(2.2));
+                if(animEn>0.5){
+                    vec2 uvTimeShift = vUv + vec2( -2.5, 1.5 ) * time * speed;	
+                    vec4 noiseGeneratorTimeShift = texture2D( noiseTexture, uvTimeShift );
+                    vec2 uvNoiseTimeShift = vUv + 0.5 * vec2( noiseGeneratorTimeShift.r, noiseGeneratorTimeShift.b );
+                    cdiff = texture2D( diffuseMap, uvNoiseTimeShift ).rgb;
+                }else{
+                    cdiff=texture2D( diffuseMap, vUv*textureRepeat ).rgb;
+                }
 				cdiff = pow( cdiff, vec3(2.2));
 				vec3 outRadiance = cdiff*irradiance;
-				gl_FragColor = vec4(pow( outRadiance, vec3(1.0/2.2)), 1.0);
+				gl_FragColor = vec4(pow( outRadiance * intensity, vec3(1.0/2.2)), 1.0);
+			}
+        </script>
+
+        <script type="text/x-glsl" id="fragmentGlow">
+			varying vec3 vNormal;
+			varying vec3 vTangent;
+			varying vec3 vBitangent;
+            varying vec3 vPosition;
+            varying vec3 wPosition;
+			varying vec2 vUv;
+            uniform sampler2D diffuseMap;
+            uniform sampler2D normalMap;
+            uniform samplerCube irradianceMap;
+            uniform vec2 textureRepeat;
+            uniform sampler2D glowMap;
+            uniform vec3 emissiveC;
+            uniform float intensity;
+
+            vec3 cdiff;
+            
+            vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
+                return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
+            }
+            
+            //https://github.com/mistic100/three.js-examples/blob/master/examples/js/shaders/LuminosityHighPassShader.js
+
+			void main() {
+
+                vec4 glow=texture2D(glowMap,vUv*textureRepeat)*30.0*2.0;
+                glow.rgb*=emissiveC;
+                vec3 luma = vec3( 0.299, 0.587, 0.114 );
+                float lg = dot( glow.xyz, luma );//calcolo luminanza Digital ITU BT.601 https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color
+                vec4 outputColor = vec4( (texture2D(diffuseMap,vUv*textureRepeat)).rgb, 1.0 );
+                float alphagl = smoothstep( 2.0, 3.0, lg );//https://en.wikipedia.org/wiki/Smoothstep
+                //se lg<2.0-->outputcolor se lg>3.0-->glow
+
+                //float alphagl = clamp((lg - 1.0) / (2.0 - 1.0), 0.0, 1.0);
+                //alphagl= alphagl * alphagl * (3.0 - 2.0 * alphagl);
+                    
+                vec4 risult_int=mix( outputColor, glow, alphagl );//interpola outputcolor e glow con valore alphagl
+                vec3 outRadiance=risult_int.xyz;
+                gl_FragColor = vec4(pow( outRadiance* intensity, vec3(1.0/2.2)), 1.0);
+			}
+        </script>
+
+        <script type="text/x-glsl" id="fragmentGlass">
+			varying vec3 vNormal;
+			varying vec3 vTangent;
+			varying vec3 vBitangent;
+            varying vec3 vPosition;
+            varying vec3 wPosition;
+			varying vec2 vUv;
+            uniform sampler2D diffuseMap;
+            uniform sampler2D normalMap;
+            uniform sampler2D specularMap;
+            uniform sampler2D metalnessMap;
+            uniform samplerCube irradianceMap;
+            uniform sampler2D roughnessMap;
+            uniform vec2 textureRepeat;
+            uniform vec3 pointLightPosition;
+            uniform vec2 normalScale;
+            uniform samplerCube envMap;
+            uniform float intensity;
+
+            vec3 cdiff;
+            vec3 cspec;
+            vec3 metalness;
+            float roughness;
+
+            vec3 getCSpec(vec3 albedo, vec3 metal){  
+				float r = max(metal.r, 0.2196) * albedo.r; //0.2196 e' #383838
+				float g = max(metal.g, 0.2196) * albedo.g;
+				float b = max(metal.b, 0.2196) * albedo.b;
+				return vec3(r,g,b);
+			}
+            
+            vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
+                return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
+            }
+            
+            vec3 FSchlick(float vDoth, vec3 f0) {
+				return f0 + (vec3(1.0)-f0)*pow(1.0 - vDoth,5.0);
+            }
+            
+            float pow2( const in float x ) { return x*x; }
+
+			float getSpecularMIPLevel( const in float blinnShininessExponent, const in int maxMIPLevel ) {
+				float maxMIPLevelScalar = float( maxMIPLevel );
+				float desiredMIPLevel = maxMIPLevelScalar - 0.79248 - 0.5 * log2( pow2( blinnShininessExponent ) + 1.0 );
+				return clamp( desiredMIPLevel, 0.0, maxMIPLevelScalar );
+			}
+
+			float GGXRoughnessToBlinnExponent( const in float ggxRoughness ) {
+				return ( 2.0 / pow2( ggxRoughness + 0.0001 ) - 2.0 );
+			}
+
+			void main() {
+
+                vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+				vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+				vec3 normal = normalize( vNormal );
+				vec3 tangent = normalize( vTangent );
+				vec3 bitangent = normalize( vBitangent );
+				mat3 vTBN = mat3( tangent, bitangent, normal );
+				vec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;
+				vec3 n = normalize( vTBN * mapN );
+				vec3 v = normalize( -vPosition);
+				vec3 h = normalize( v + l);
+				float nDotl = max(dot( n, l ),0.000001);
+				float lDoth = max(dot( l, h ),0.000001);
+				float nDoth = max(dot( n, h ),0.000001);
+				float vDoth = max(dot( v, h ),0.000001);
+                float nDotv = max(dot( n, v ),0.000001);
+                vec3 worldN = inverseTransformDirection( n, viewMatrix );
+                vec3 worldV = cameraPosition - wPosition ;
+                
+                metalness = texture2D( metalnessMap, vUv*textureRepeat).rgb;
+                metalness = pow( metalness, vec3(2.2));
+                cdiff=texture2D( diffuseMap, vUv*textureRepeat ).rgb;
+				cdiff = pow( cdiff, vec3(2.2));
+				cspec = getCSpec(cdiff, metalness);
+				cdiff = cdiff*(vec3(1)-metalness);
+                vec3 fresnel = FSchlick(vDoth, vec3(0.0));
+                mapN.xy = normalScale * mapN.xy;
+                vec3 rRifr = normalize( refract(-worldV,worldN,1.0/2.42));//n1/n2-->3.0/3.0
+                vec3 envLightRifr=textureCube( envMap, vec3(-rRifr.x, rRifr.yz)).rgb;
+                envLightRifr = pow( envLightRifr, vec3(2.2));
+                vec3 r = normalize( reflect(-worldV,worldN));
+                roughness = texture2D( roughnessMap, vUv*textureRepeat).r;
+                float alpha = roughness * roughness;
+				float blinnShininessExponent = GGXRoughnessToBlinnExponent(roughness);
+				float specularMIPLevel = getSpecularMIPLevel(blinnShininessExponent, 8 );
+                vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz),specularMIPLevel).rgb;
+                envLight = pow( envLight, vec3(2.2));
+
+
+                vec3 outRadiance=(vec3(1.0)-fresnel)*envLightRifr+fresnel*envLight;
+                gl_FragColor = vec4(pow( outRadiance*intensity, vec3(1.0/2.2)), 1.0);
 			}
         </script>
 
@@ -1797,6 +2069,8 @@
 			vs = document.getElementById("vertex").textContent;
 			fs = document.getElementById("fragment").textContent;
             fsIrr=document.getElementById("fragmentIrr").textContent;
+            fsGlow=document.getElementById("fragmentGlow").textContent;
+            fsGlass=document.getElementById("fragmentGlass").textContent;
 
 			var ourMaterial = [new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
                                 new THREE.ShaderMaterial({ uniforms: uniforms2, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
@@ -1813,6 +2087,14 @@
                                 new THREE.ShaderMaterial({ uniforms: uniforms5, vertexShader: vs, fragmentShader: fsIrr, side: THREE.DoubleSide })];
             altMaterial.vertexTangents = true;
 			altMaterial.needsUpdate = true;
+
+            var glassMaterial=new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fsGlass, side: THREE.DoubleSide });
+            glassMaterial.vertexTangents=true;
+            glassMaterial.needsUpdate=true;
+
+            var glowMaterial=new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fsGlow, side: THREE.DoubleSide });
+            glowMaterial.vertexTangents=true;
+            glowMaterial.needsUpdate=true;
 			
             //caricamento di default del primo modello (ascia)
 			var loader = new THREE.GLTFLoader();
@@ -1854,6 +2136,8 @@
                     objects.push(emMesh2);
 					scene.add( emMesh2 );
                     obj.add(emMesh2);
+
+
 				} );
 
             //definizione delle funzioni che caricano i 3 modelli 3d
@@ -1970,6 +2254,7 @@
                     objects.push(emMesh4);
 					scene.add( emMesh4 );
                     obj.add(emMesh4);
+                    obj.scale=0.5;
 				} );
             }
 
@@ -2284,6 +2569,8 @@
                     uniforms1.time.value+=delta;
                     uniforms2.time.value-=delta;
                     uniforms3.time.value+=delta/2.0;
+                    uniforms4.time.value-=delta/2.0;
+                    uniforms5.time.value+=delta*5.0;
                 }
                 if(film.checked==true){
                     filmpass.uniforms.amount.value+=0.1;
