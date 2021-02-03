@@ -796,21 +796,23 @@
                         emMesh.material=glowMaterial[0];
                         copyMesh=undefined;
                         copyMesh=new THREE.Mesh(emMesh.geometry.clone(),customGlowMaterial);
-                        copyMesh.scale.multiplyScalar(0.15);
-                        scene.add(copyMesh);
                         var p =document.getElementById("products").value;
+                        if(p!="sickle")copyMesh.scale.multiplyScalar(0.15);
+                        scene.add(copyMesh);
                         if(p=="axe"){
                             copyMesh.position.z=emMesh.position.z;
                         }else if(p=="shield"){
                             copyMesh.position.z=emMesh.position.z;
-                            copyMesh.position.x=emMesh.position.x+0.15;
+                            copyMesh.position.x=emMesh.position.x;//+0.15;
                         }else if(p=="sword"){
                             copyMesh.position.z=emMesh.position.z;
                             copyMesh.rotation.y=emMesh.rotation.y;
-                            copyMesh.position.y+=0.4;
+                            copyMesh.position.y+=0.2;
                         }else{
                             copyMesh.position.z=emMesh.position.z;
-                            copyMesh.scale.y=emMesh.scale.y+0.5;
+                            copyMesh.scale.y=5.5;
+                            copyMesh.scale.x=0.15;
+                            copyMesh.scale.z=0.15;
                         }
                     }else if(x=='goldCasual'){
                         uniforms1.normalMap.value=loadTexture( "textures/prova3.jpg" );
@@ -903,19 +905,22 @@
                         emMesh1.material=glowMaterial[1];
                         copyMesh1=undefined;
                         copyMesh1=new THREE.Mesh(emMesh1.geometry.clone(),customGlowMaterial);
-                        scene.add(copyMesh1);
                         var p =document.getElementById("products").value;
-                        copyMesh1.scale.multiplyScalar(0.15);
+                        if(p!="sickle")copyMesh1.scale.multiplyScalar(0.15);
+                        scene.add(copyMesh1);
                         if(p=="axe"){
-                            copyMesh1.position.z=emMesh1.position.z-0.3;
+                            copyMesh1.position.z=emMesh1.position.z;//-0.3;
                         }else if(p=="shield"){
                             copyMesh1.position.z=emMesh1.position.z;
-                            copyMesh1.position.x=emMesh1.position.x+0.3;
+                            copyMesh1.position.x=emMesh1.position.x;//+0.3;
                         }else if(p=="sword"){
                             copyMesh1.rotation.y=emMesh1.rotation.y;
-                            copyMesh1.position.y=emMesh1.position.y-0.1;
+                            copyMesh1.position.y=emMesh1.position.y;//-0.1;
+                            copyMesh1.position.y+=0.2;
                         }else{
-                            copyMesh1.scale.y=emMesh1.scale.y+2.0;
+                            copyMesh1.scale.y=5.5;
+                            copyMesh1.scale.x=0.15;
+                            copyMesh1.scale.z=0.15;
                         }
                     }else if(x=='goldCasual'){
                         uniforms2.normalMap.value=loadTexture( "textures/prova3.jpg" );
@@ -1008,19 +1013,22 @@
                         emMesh2.material=glowMaterial[2];
                         copyMesh2=undefined;
                         copyMesh2=new THREE.Mesh(emMesh2.geometry.clone(),customGlowMaterial);
-                        scene.add(copyMesh2);
                         var p =document.getElementById("products").value;
-                        copyMesh2.scale.multiplyScalar(0.15);
+                        if(p!="sickle")copyMesh2.scale.multiplyScalar(0.15);
+                        scene.add(copyMesh2);
                         if(p=="axe"){
-                            copyMesh2.position.z=emMesh2.position.z+0.6;
+                            copyMesh2.position.z=emMesh2.position.z;//+0.6;
                         }else if(p=="shield"){
                             copyMesh2.position.z=emMesh2.position.z;
-                            copyMesh2.position.x=emMesh2.position.x+0.3;
+                            copyMesh2.position.x=emMesh2.position.x;//+0.3;
                         }else if(p=="sword"){
                             copyMesh2.rotation.y=emMesh2.rotation.y;
-                            copyMesh2.position.y=emMesh2.position.y-0.1;
+                            copyMesh2.position.y=emMesh2.position.y;//-0.1;
+                            copyMesh2.position.y+=0.2;
                         }else{
-                            copyMesh2.scale.y=emMesh2.scale.y;
+                            copyMesh2.scale.y=4.6;
+                            copyMesh2.scale.x=0.15;
+                            copyMesh2.scale.z=0.15;
                         }
                     }else if(x=='goldCasual'){
                         uniforms3.normalMap.value=loadTexture( "textures/prova3.jpg" );
@@ -1114,9 +1122,12 @@
                         copyMesh3=undefined;
                         copyMesh3=new THREE.Mesh(emMesh3.geometry.clone(),customGlowMaterial);
                         scene.add(copyMesh3);
-                        copyMesh3.scale.y=emMesh3.scale.y+0.05;
+                        /*copyMesh3.scale.y=emMesh3.scale.y+0.05;
                         copyMesh3.scale.x=emMesh3.scale.x+0.15;
-                        copyMesh3.scale.z=emMesh3.scale.z+0.05;
+                        copyMesh3.scale.z=emMesh3.scale.z+0.05;*/
+                        copyMesh3.scale.y=4.6;
+                        copyMesh3.scale.x=0.15;
+                        copyMesh3.scale.z=0.15;
                     }else if(x=='goldCasual'){
                         uniforms4.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms4.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -1212,9 +1223,12 @@
                         copyMesh4.position.y=emMesh4.position.y;
                         copyMesh4.position.x=emMesh4.position.x;
                         copyMesh4.position.z=emMesh4.position.z;
-                        copyMesh4.scale.y=emMesh4.scale.y+0.05;
+                        /*copyMesh4.scale.y=emMesh4.scale.y+0.05;
                         copyMesh4.scale.x=emMesh4.scale.x+0.15;
-                        copyMesh4.scale.z=emMesh4.scale.z+0.05;
+                        copyMesh4.scale.z=emMesh4.scale.z+0.05;*/
+                        copyMesh4.scale.y=4.6;
+                        copyMesh4.scale.x=0.15;
+                        copyMesh4.scale.z=0.15;
                     }else if(x=='goldCasual'){
                         uniforms5.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms5.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -2241,7 +2255,7 @@
                 "c":   { type: "f", value: 1.0 },//soglia del dot products tra normale e view camera, influisce su quantità di flow visibile
 			    "p":   { type: "f", value: 2.0 },//fattore che indica la potenza dell'effetto(più piccola è meglio)
 			    glowColor: { type: "c", value: new THREE.Color(0xffff00) },
-			    viewVector: { type: "v3", value: camera.position }},vertexShader:vsCG,fragmentShader:fsCG,side: THREE.DoubleSide,
+			    viewVector: { type: "v3", value: camera.position }},vertexShader:vsCG,fragmentShader:fsCG,side: THREE.FrontSide,
 		blending: THREE.AdditiveBlending,//modalità blending additiva per gestire trasparenza materiale con altri elementi opachi
 		transparent: true});
         customGlowMaterial.vertexTangents=true;
@@ -2251,7 +2265,7 @@
 			var loader = new THREE.GLTFLoader();
 			loader.useIndices = true;
 			loader.load( "models/axes5.glb", function ( model ) {
-					console.log(model);
+					/*console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
 					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
@@ -2286,7 +2300,26 @@
 					THREE.BufferGeometryUtils.computeTangents(geometry);
                     objects.push(emMesh2);
 					scene.add( emMesh2 );
+                    obj.add(emMesh2);*/
+
+                    console.log(model);
+                    model.scene.children[0].children[0].material=ourMaterial[0];
+                    emMesh=model.scene.children[0].children[0];
+                    model.scene.children[0].children[1].material=ourMaterial[1];
+                    emMesh1=model.scene.children[0].children[1];
+                    model.scene.children[0].children[2].material=ourMaterial[2];
+                    emMesh2=model.scene.children[0].children[2];
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[0].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[1].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[2].geometry);
+                    objects.push(emMesh);
+                    objects.push(emMesh1);
+                    objects.push(emMesh2);
+                    obj.add(emMesh);
+                    obj.add(emMesh1);
                     obj.add(emMesh2);
+                    obj.scale.multiplyScalar(0.1);
+                    scene.add(model.scene.children[0]);
 
 
 				} );
@@ -2296,7 +2329,7 @@
                 var loader = new THREE.GLTFLoader();
 			    loader.useIndices = true;
 				loader.load( "models/axes5.glb", function ( model ) {
-					console.log(model);
+					/*console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
 					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
@@ -2331,7 +2364,27 @@
 					THREE.BufferGeometryUtils.computeTangents(geometry);
                     objects.push(emMesh2);
 					scene.add( emMesh2 );
+                    obj.add(emMesh2);*/
+
+                    console.log(model);
+                    model.scene.children[0].children[0].material=ourMaterial[0];
+                    emMesh=model.scene.children[0].children[0];
+                    model.scene.children[0].children[1].material=ourMaterial[1];
+                    emMesh1=model.scene.children[0].children[1];
+                    model.scene.children[0].children[2].material=ourMaterial[2];
+                    emMesh2=model.scene.children[0].children[2];
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[0].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[1].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[2].geometry);
+                    objects.push(emMesh);
+                    objects.push(emMesh1);
+                    objects.push(emMesh2);
+                    obj.add(emMesh);
+                    obj.add(emMesh1);
                     obj.add(emMesh2);
+                    //obj.scale.multiplyScalar(0.1);
+                    scene.add(model.scene.children[0]);
+
 				} );
             }
 
@@ -2340,7 +2393,7 @@
                 var loader = new THREE.GLTFLoader();
 			    loader.useIndices = true;
 				loader.load( "models/falce.glb", function ( model ) {
-					console.log(model);
+					/*console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
 					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
@@ -2405,7 +2458,37 @@
                     objects.push(emMesh4);
 					scene.add( emMesh4 );
                     obj.add(emMesh4);
-                    obj.scale=0.5;
+                    obj.scale=0.5;*/
+
+                    console.log(model);
+                    model.scene.children[0].children[0].material=ourMaterial[0];
+                    emMesh=model.scene.children[0].children[0];
+                    model.scene.children[0].children[1].material=ourMaterial[1];
+                    emMesh1=model.scene.children[0].children[1];
+                    model.scene.children[0].children[2].material=ourMaterial[2];
+                    emMesh2=model.scene.children[0].children[2];
+                    model.scene.children[0].children[3].material=ourMaterial[3];
+                    emMesh3=model.scene.children[0].children[3];
+                    model.scene.children[0].children[4].material=ourMaterial[4];
+                    emMesh4=model.scene.children[0].children[4];
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[0].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[1].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[2].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[3].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[4].geometry);
+                    objects.push(emMesh);
+                    objects.push(emMesh1);
+                    objects.push(emMesh2);
+                    objects.push(emMesh3);
+                    objects.push(emMesh4);
+                    obj.add(emMesh);
+                    obj.add(emMesh1);
+                    obj.add(emMesh2);
+                    obj.add(emMesh3);
+                    obj.add(emMesh4);
+                    obj.scale.y=4.5;
+                    scene.add(model.scene.children[0]);
+
 				} );
             }
 
@@ -2413,7 +2496,7 @@
                 var loader = new THREE.GLTFLoader();
 			    loader.useIndices = true;
 				loader.load( "models/shield3.glb", function ( model ) {
-					console.log(model);
+					/*console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
 					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
@@ -2441,7 +2524,27 @@
 					THREE.BufferGeometryUtils.computeTangents(geometry);
                     objects.push(emMesh2);
 					scene.add( emMesh2 );
+                    obj.add(emMesh2);*/
+
+                    console.log(model);
+                    model.scene.children[0].children[0].material=ourMaterial[0];
+                    emMesh=model.scene.children[0].children[0];
+                    model.scene.children[0].children[1].material=ourMaterial[1];
+                    emMesh1=model.scene.children[0].children[1];
+                    model.scene.children[0].children[2].material=ourMaterial[2];
+                    emMesh2=model.scene.children[0].children[2];
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[0].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[1].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[2].geometry);
+                    objects.push(emMesh);
+                    objects.push(emMesh1);
+                    objects.push(emMesh2);
+                    obj.add(emMesh);
+                    obj.add(emMesh1);
                     obj.add(emMesh2);
+                    //obj.scale.multiplyScalar(0.1);
+                    scene.add(model.scene.children[0]);
+
 				} );
             }
 
@@ -2449,7 +2552,7 @@
                 var loader = new THREE.GLTFLoader();
 			    loader.useIndices = true;
 				loader.load( "models/sword.glb", function ( model ) {
-					console.log(model);
+					/*console.log(model);
 					geometry= model.scene.children[0].children[0].geometry;
 					geometry.center();
 					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
@@ -2480,7 +2583,26 @@
                     emMesh2.rotation.y+=90*Math.PI/180;
                     objects.push(emMesh2);
 					scene.add( emMesh2 );
+                    obj.add(emMesh2);*/
+
+                    console.log(model);
+                    model.scene.children[0].children[0].material=ourMaterial[0];
+                    emMesh=model.scene.children[0].children[0];
+                    model.scene.children[0].children[1].material=ourMaterial[1];
+                    emMesh1=model.scene.children[0].children[1];
+                    model.scene.children[0].children[2].material=ourMaterial[2];
+                    emMesh2=model.scene.children[0].children[2];
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[0].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[1].geometry);
+                    THREE.BufferGeometryUtils.computeTangents(model.scene.children[0].children[2].geometry);
+                    objects.push(emMesh);
+                    objects.push(emMesh1);
+                    objects.push(emMesh2);
+                    obj.add(emMesh);
+                    obj.add(emMesh1);
                     obj.add(emMesh2);
+                    //obj.scale.multiplyScalar(0.1);
+                    scene.add(model.scene.children[0]);
 				} );
             }
 
