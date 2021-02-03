@@ -269,6 +269,27 @@
                 var iem=document.getElementById("iem");
                 iem.checked=false;
 
+                if(copyMesh!=undefined && mat1!="glow"){
+                        scene.remove(copyMesh);
+                        copyMesh=undefined;
+                    }
+                if(copyMesh1!=undefined && mat2!="glow"){
+                    scene.remove(copyMesh1);
+                    copyMesh1=undefined;
+                }
+                if(copyMesh2!=undefined && mat3!="glow"){
+                    scene.remove(copyMesh2);
+                    copyMesh2=undefined;
+                }
+                if(copyMesh3!=undefined && mat4!="glow"){
+                    scene.remove(copyMesh3);
+                    copyMesh3=undefined;
+                }
+                if(copyMesh4!=undefined && mat5!="glow"){
+                    scene.remove(copyMesh4);
+                    copyMesh4=undefined;
+                }
+
                 
                 if(x=="axe"){
                     anim.disabled=false;
@@ -709,6 +730,10 @@
                         emMesh.material=ourMaterial[0];
                     }
                 }
+                if(copyMesh!=undefined && x!="glow"){
+                        scene.remove(copyMesh);
+                        copyMesh=undefined;
+                    }
                 if(x=='metalAxe'){
                         uniforms1.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms1.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -766,11 +791,27 @@
                         uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
                     }else if(x=='glass'){
-                        glassMaterial.uniforms=uniforms1;
-                        emMesh.material=glassMaterial;
+                        emMesh.material=glassMaterial[0];
                     }else if(x=='glow'){
-                        glowMaterial.uniforms=uniforms1;
-                        emMesh.material=glowMaterial;
+                        emMesh.material=glowMaterial[0];
+                        copyMesh=undefined;
+                        copyMesh=new THREE.Mesh(emMesh.geometry.clone(),customGlowMaterial);
+                        copyMesh.scale.multiplyScalar(0.15);
+                        scene.add(copyMesh);
+                        var p =document.getElementById("products").value;
+                        if(p=="axe"){
+                            copyMesh.position.z=emMesh.position.z;
+                        }else if(p=="shield"){
+                            copyMesh.position.z=emMesh.position.z;
+                            copyMesh.position.x=emMesh.position.x+0.15;
+                        }else if(p=="sword"){
+                            copyMesh.position.z=emMesh.position.z;
+                            copyMesh.rotation.y=emMesh.rotation.y;
+                            copyMesh.position.y+=0.4;
+                        }else{
+                            copyMesh.position.z=emMesh.position.z;
+                            copyMesh.scale.y=emMesh.scale.y+0.5;
+                        }
                     }else if(x=='goldCasual'){
                         uniforms1.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms1.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -796,6 +837,10 @@
                         emMesh1.material=ourMaterial[1];
                     }
                 }
+                if(copyMesh1!=undefined && x!="glow"){
+                        scene.remove(copyMesh1);
+                        copyMesh1=undefined;
+                    }
                 if(x=='metalAxe'){
                         uniforms2.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms2.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -853,11 +898,25 @@
                         uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
                     }else if(x=='glass'){
-                        glassMaterial.uniforms=uniforms2;
-                        emMesh1.material=glassMaterial;
+                        emMesh1.material=glassMaterial[1];
                     }else if(x=='glow'){
-                        glowMaterial.uniforms=uniforms2;
-                        emMesh1.material=glowMaterial;
+                        emMesh1.material=glowMaterial[1];
+                        copyMesh1=undefined;
+                        copyMesh1=new THREE.Mesh(emMesh1.geometry.clone(),customGlowMaterial);
+                        scene.add(copyMesh1);
+                        var p =document.getElementById("products").value;
+                        copyMesh1.scale.multiplyScalar(0.15);
+                        if(p=="axe"){
+                            copyMesh1.position.z=emMesh1.position.z-0.3;
+                        }else if(p=="shield"){
+                            copyMesh1.position.z=emMesh1.position.z;
+                            copyMesh1.position.x=emMesh1.position.x+0.3;
+                        }else if(p=="sword"){
+                            copyMesh1.rotation.y=emMesh1.rotation.y;
+                            copyMesh1.position.y=emMesh1.position.y-0.1;
+                        }else{
+                            copyMesh1.scale.y=emMesh1.scale.y+2.0;
+                        }
                     }else if(x=='goldCasual'){
                         uniforms2.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms2.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -883,6 +942,10 @@
                         emMesh2.material=ourMaterial[2];
                     }
                 }
+                if(copyMesh2!=undefined && x!="glow"){
+                        scene.remove(copyMesh2);
+                        copyMesh2=undefined;
+                    }
                 if(x=='metalAxe'){
                         uniforms3.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -940,11 +1003,25 @@
                         uniforms3.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms3.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
                     }else if(x=='glass'){
-                        glassMaterial.uniforms=uniforms3;
-                        emMesh2.material=glassMaterial;
+                        emMesh2.material=glassMaterial[2];
                     }else if(x=='glow'){
-                        glowMaterial.uniforms=uniforms3;
-                        emMesh2.material=glowMaterial;
+                        emMesh2.material=glowMaterial[2];
+                        copyMesh2=undefined;
+                        copyMesh2=new THREE.Mesh(emMesh2.geometry.clone(),customGlowMaterial);
+                        scene.add(copyMesh2);
+                        var p =document.getElementById("products").value;
+                        copyMesh2.scale.multiplyScalar(0.15);
+                        if(p=="axe"){
+                            copyMesh2.position.z=emMesh2.position.z+0.6;
+                        }else if(p=="shield"){
+                            copyMesh2.position.z=emMesh2.position.z;
+                            copyMesh2.position.x=emMesh2.position.x+0.3;
+                        }else if(p=="sword"){
+                            copyMesh2.rotation.y=emMesh2.rotation.y;
+                            copyMesh2.position.y=emMesh2.position.y-0.1;
+                        }else{
+                            copyMesh2.scale.y=emMesh2.scale.y;
+                        }
                     }else if(x=='goldCasual'){
                         uniforms3.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms3.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -970,6 +1047,10 @@
                         emMesh3.material=ourMaterial[3];
                     }
                 }
+                if(copyMesh3!=undefined && x!="glow"){
+                        scene.remove(copyMesh3);
+                        copyMesh3=undefined;
+                    }
                 if(x=='metalAxe'){
                         uniforms4.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms4.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -1027,11 +1108,15 @@
                         uniforms4.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
                     }else if(x=='glass'){
-                        glassMaterial.uniforms=uniforms4;
-                        emMesh3.material=glassMaterial;
+                        emMesh3.material=glassMaterial[3];
                     }else if(x=='glow'){
-                        glowMaterial.uniforms=uniforms4;
-                        emMesh3.material=glowMaterial;
+                        emMesh3.material=glowMaterial[3];
+                        copyMesh3=undefined;
+                        copyMesh3=new THREE.Mesh(emMesh3.geometry.clone(),customGlowMaterial);
+                        scene.add(copyMesh3);
+                        copyMesh3.scale.y=emMesh3.scale.y+0.05;
+                        copyMesh3.scale.x=emMesh3.scale.x+0.15;
+                        copyMesh3.scale.z=emMesh3.scale.z+0.05;
                     }else if(x=='goldCasual'){
                         uniforms4.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms4.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -1057,6 +1142,10 @@
                         emMesh4.material=ourMaterial[4];
                     }
                 }
+                if(copyMesh4!=undefined && x!="glow"){
+                        scene.remove(copyMesh4);
+                        copyMesh4=undefined;
+                    }
                 if(x=='metalAxe'){
                         uniforms5.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
                         uniforms5.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
@@ -1114,11 +1203,18 @@
                         uniforms5.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
                         uniforms5.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
                     }else if(x=='glass'){
-                        glassMaterial.uniforms=uniforms5;
-                        emMesh4.material=glassMaterial;
+                        emMesh4.material=glassMaterial[4];
                     }else if(x=='glow'){
-                        glowMaterial.uniforms=uniforms5;
-                        emMesh4.material=glowMaterial;
+                        emMesh4.material=glowMaterial[4];
+                        copyMesh4=undefined;
+                        copyMesh4=new THREE.Mesh(emMesh4.geometry.clone(),customGlowMaterial);
+                        scene.add(copyMesh4);
+                        copyMesh4.position.y=emMesh4.position.y;
+                        copyMesh4.position.x=emMesh4.position.x;
+                        copyMesh4.position.z=emMesh4.position.z;
+                        copyMesh4.scale.y=emMesh4.scale.y+0.05;
+                        copyMesh4.scale.x=emMesh4.scale.x+0.15;
+                        copyMesh4.scale.z=emMesh4.scale.z+0.05;
                     }else if(x=='goldCasual'){
                         uniforms5.normalMap.value=loadTexture( "textures/prova3.jpg" );
                         uniforms5.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
@@ -1401,6 +1497,32 @@
 			}
         </script>
 
+        <script type="text/x-glsl" id="vertexCustomGlow">
+            uniform vec3 viewVector;
+            uniform float c;
+            uniform float p;
+            varying float rangeIntensity;
+    
+            void main() {
+                vec3 vNormal = normalize( normalMatrix * normal );
+                vec3 vNormel = normalize( normalMatrix * viewVector );
+                rangeIntensity = pow( c - dot(vNormal, vNormel), p );
+                
+                gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+            }
+            </script>
+
+        <script type="text/x-glsl" id="fragmentCustomGlow">
+			uniform vec3 glowColor;
+            varying float rangeIntensity;
+
+            
+			void main() {
+                vec3 glow = glowColor * rangeIntensity;
+                gl_FragColor = vec4( glow, 1.0 );
+			}
+        </script>
+
         <script type="text/x-glsl" id="fragmentGlass">
 			varying vec3 vNormal;
 			varying vec3 vTangent;
@@ -1492,8 +1614,10 @@
                 envLight = pow( envLight, vec3(2.2));
 
 
-                vec3 outRadiance=(vec3(1.0)-fresnel)*envLightRifr+fresnel*envLight;
-                gl_FragColor = vec4(pow( outRadiance*intensity, vec3(1.0/2.2)), 1.0);
+                vec3 outRadiance=vec3(255.0,15.0,0.0)*(vec3(1.0)-fresnel)*envLightRifr+fresnel*envLight;
+                gl_FragColor = vec4(pow( outRadiance*intensity, vec3(1.0/2.2)), 0.5);
+
+
 			}
         </script>
 
@@ -1792,6 +1916,11 @@
             var occlusionRenderTarget;
             var clock=new THREE.Clock();
             var filmpass;
+            var copyMesh;
+            var copyMesh1;
+            var copyMesh2;
+            var copyMesh3;
+            var copyMesh4;
 
             //composer = new POSTPROCESSING.EffectComposer(renderer);
             //let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
@@ -2070,6 +2199,8 @@
 			fs = document.getElementById("fragment").textContent;
             fsIrr=document.getElementById("fragmentIrr").textContent;
             fsGlow=document.getElementById("fragmentGlow").textContent;
+            vsCG=document.getElementById("vertexCustomGlow").textContent;
+            fsCG=document.getElementById("fragmentCustomGlow").textContent;
             fsGlass=document.getElementById("fragmentGlass").textContent;
 
 			var ourMaterial = [new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
@@ -2088,13 +2219,33 @@
             altMaterial.vertexTangents = true;
 			altMaterial.needsUpdate = true;
 
-            var glassMaterial=new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fsGlass, side: THREE.DoubleSide });
+            var glassMaterial=[new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fsGlass, side: THREE.DoubleSide, transparent:true }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms2, vertexShader: vs, fragmentShader: fsGlass, side: THREE.DoubleSide, transparent:true }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms3, vertexShader: vs, fragmentShader: fsGlass, side: THREE.DoubleSide, transparent:true }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms4, vertexShader: vs, fragmentShader: fsGlass, side: THREE.DoubleSide, transparent:true }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms5, vertexShader: vs, fragmentShader: fsGlass, side: THREE.DoubleSide, transparent:true })
+            ];
             glassMaterial.vertexTangents=true;
             glassMaterial.needsUpdate=true;
 
-            var glowMaterial=new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fsGlow, side: THREE.DoubleSide });
+            var glowMaterial=[new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fsGlow, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms2, vertexShader: vs, fragmentShader: fsGlow, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms3, vertexShader: vs, fragmentShader: fsGlow, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms4, vertexShader: vs, fragmentShader: fsGlow, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms5, vertexShader: vs, fragmentShader: fsGlow, side: THREE.DoubleSide }),
+            ];
             glowMaterial.vertexTangents=true;
             glowMaterial.needsUpdate=true;
+
+            var customGlowMaterial=new THREE.ShaderMaterial({uniforms:{
+                "c":   { type: "f", value: 1.0 },//soglia del dot products tra normale e view camera, influisce su quantità di flow visibile
+			    "p":   { type: "f", value: 2.0 },//fattore che indica la potenza dell'effetto(più piccola è meglio)
+			    glowColor: { type: "c", value: new THREE.Color(0xffff00) },
+			    viewVector: { type: "v3", value: camera.position }},vertexShader:vsCG,fragmentShader:fsCG,side: THREE.DoubleSide,
+		blending: THREE.AdditiveBlending,//modalità blending additiva per gestire trasparenza materiale con altri elementi opachi
+		transparent: true});
+        customGlowMaterial.vertexTangents=true;
+        customGlowMaterial.needsUpdate=true;
 			
             //caricamento di default del primo modello (ascia)
 			var loader = new THREE.GLTFLoader();
@@ -2574,6 +2725,26 @@
                 }
                 if(film.checked==true){
                     filmpass.uniforms.amount.value+=0.1;
+                }
+                if(copyMesh!=undefined){
+                    copyMesh.material.uniforms.viewVector.value = 
+		            new THREE.Vector3().subVectors( camera.position, copyMesh.position );
+                }
+                if(copyMesh1!=undefined){
+                    copyMesh1.material.uniforms.viewVector.value = 
+		            new THREE.Vector3().subVectors( camera.position, copyMesh1.position );
+                }
+                if(copyMesh2!=undefined){
+                    copyMesh2.material.uniforms.viewVector.value = 
+		            new THREE.Vector3().subVectors( camera.position, copyMesh2.position );
+                }
+                if(copyMesh3!=undefined){
+                    copyMesh3.material.uniforms.viewVector.value = 
+		            new THREE.Vector3().subVectors( camera.position, copyMesh3.position );
+                }
+                if(copyMesh4!=undefined){
+                    copyMesh4.material.uniforms.viewVector.value = 
+		            new THREE.Vector3().subVectors( camera.position, copyMesh4.position );
                 }
 				stats.update();
 				render();
