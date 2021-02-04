@@ -169,6 +169,9 @@
         <script src="libs/GammaCorrectionShader.js"></script>
 
         <script>
+            /*
+            funzione che verifica se l'animazione è attivata oppure no, aggiornando gli uniforms
+            */
             function changeAnim(){
                 var anim=document.getElementById("animated");
                 if(anim.checked==true){
@@ -186,6 +189,10 @@
                 }
             }
 
+            /*
+            funzione che gestisce l'effetto film della grana, se attivo viene aggiunto come 
+            passata del composer
+            */
             function changeFilm(){
                 var film=document.getElementById("film");
                 var x = document.getElementById("globalGodrays");
@@ -207,6 +214,11 @@
                 }
             }
 
+            /*
+            funzione che gestisce la pre filtrata EM con BRDF diffusiva
+            se attiva aggiorna i materiali delle mesh, disattivando 
+            il materiale glow e glass
+            */
             function changeIem(){
                 var iem=document.getElementById("iem");
                 var prod=document.getElementById("products").value;
@@ -249,6 +261,11 @@
                 }
             }
 
+            /*
+            funzione che si occupa della gestione del prodotto da visualizzare
+            ogni volta che si cambia prodotto viene craicato e vengono
+            aggiornate le voci della grafica presente
+            */
             function changeProd(x){
                 var mat1 = document.getElementById("material1");
                 var mat2 = document.getElementById("material2");
@@ -490,6 +507,9 @@
         </script>
 
         <script>
+            /*
+            funzione che aggiorna l'intensità della luce
+            */
             function changeIntensity(x){
                 uniforms1.intensity.value=x;
                 uniforms2.intensity.value=x;
@@ -500,6 +520,10 @@
         </script>
 
         <script>
+            /*
+            funzione che carica il background selezionato
+            e aggiorna i vari uniforms
+            */
             function changeBack(x){
                 if(x=='chineseGarden'){
                         loadEnvMapCG();
@@ -548,6 +572,11 @@
         </script>
 
         <script>
+
+            /*
+            funzione che gestisce l'attivazione dei god rays globali
+            definisce gli uniforms da usare e attiva anche un effetto di fxaa
+            */
             function changeGodRaysGlob(){
                 var x = document.getElementById("globalGodrays");
                 var y = document.getElementById("localGodrays");
@@ -593,6 +622,21 @@
                 }
             }
 
+            /*
+            funzione che gestisce l'attivazione dei god rays localizzati
+            usa 2 god rays per ogni prodotto
+            */
+            //1)blurPass->(convolution matrial:
+            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/convolution/shader.vert <- inizilizza i coordinate dei 4 angoli dei vertici e passali al fragment 
+            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/convolution/shader.frag <- accedi ai 4 campioni e fai la media
+            //)(kernelSize)
+            //2)renderer pass
+            //3)depth mask pass->(DepthMaskMaterial: <- inizializza uniforms per gli shaders e fai test sul depth per stabilire dove applicare l'effetto e dove no
+            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/common/shader.vert <- media della posizione sommato a 0.5
+            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/depth-mask/shader.frag) <-in base ai test fatti nel material stabilisce quali parti ricevono l'ffetto god rays mascherando quelle su cui non applicarlo
+            //4)godRaysPass->(GodRaysMaterial:<-inizializza i vari uniforms necessari per l'effetto god rays
+            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/common/shader.vert <- media della posizione sommato a 0.5
+            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/god-rays/shader.frag) <- uguale a quello globale presente qui
             function changeGodRays(){
                 var x = document.getElementById("localGodrays");
                 var y = document.getElementById("globalGodrays");
@@ -691,6 +735,10 @@
                 }
             }
 
+            /*
+            funzione che gestisce l'attivazione dell'effetto blur
+            prima aggiunge il blur verticale e poi quello orizzontale
+            */
             function changeBlurred(){
                 var x = document.getElementById("blurred");
                 var y = document.getElementById("localGodrays");
@@ -722,6 +770,10 @@
         </script>
 
         <script>
+
+            /*
+            funzione che si occupa di gestire il cambiamento del materiale della prima mesh
+            */
             function changeM1(x){
                 if(x!='glass' && x!='glow'){
                     if(document.getElementById("iem").checked==true){
@@ -831,6 +883,9 @@
                     }
             }
 
+            /*
+            funzione che si occupa di gestire il cambiamento del materiale della seconda mesh
+            */
             function changeM2(x){
                 if(x!='glass' && x!='glow'){
                     if(document.getElementById("iem").checked==true){
@@ -939,6 +994,9 @@
                     }
             }
 
+            /*
+            funzione che si occupa di gestire il cambiamento del materiale della terza mesh
+            */
             function changeM3(x){
                 if(x!='glass' && x!='glow'){
                     if(document.getElementById("iem").checked==true){
@@ -1047,6 +1105,9 @@
                     }
             }
 
+            /*
+            funzione che si occupa di gestire il cambiamento del materiale della quarta mesh
+            */
             function changeM4(x){
                 if(x!='glass' && x!='glow'){
                     if(document.getElementById("iem").checked==true){
@@ -1145,6 +1206,9 @@
                     }
             }
 
+            /*
+            funzione che si occupa di gestire il cambiamento del materiale della quinta mesh
+            */
             function changeM5(x){
                 if(x!='glass' && x!='glow'){
                     if(document.getElementById("iem").checked==true){
@@ -1249,7 +1313,8 @@
 
 		<!-- shaders -->
 
-		<script type="text/x-glsl" id="vertex">
+        <!-- vertex shader definisce gl_Position e passa diversi elementi ai vari fragment shader -->
+        <script type="text/x-glsl" id="vertex">
 		attribute vec4 tangent;
 		varying vec3 vNormal;
         varying vec3 vPosition;
@@ -1272,6 +1337,7 @@
 		}
 		</script>
 
+        <!-- fragment shader classico che definisce il colore tramite la normale BRDF e aggiunge riflessi speculari -->
 		<script type="text/x-glsl" id="fragment">
 			varying vec3 vNormal;
 			varying vec3 vTangent;
@@ -1312,7 +1378,10 @@
             vec3 cdiff;
             vec3 cspec;
 			float roughness;
-			
+            
+            /*
+            funzione che converte albedo e metal in cspec
+            */
 			vec3 getCSpec(vec3 albedo, vec3 metal){  
 				float r = max(metal.r, 0.2196) * albedo.r; //0.2196 e' #383838
 				float g = max(metal.g, 0.2196) * albedo.g;
@@ -1322,12 +1391,18 @@
 
 			float pow2( const in float x ) { return x*x; }
 
+            /*
+            funzione che usa il valore di rufosità espresso come blinnShininessExponent per accedere alla MipMap
+            */
 			float getSpecularMIPLevel( const in float blinnShininessExponent, const in int maxMIPLevel ) {
 				float maxMIPLevelScalar = float( maxMIPLevel );
 				float desiredMIPLevel = maxMIPLevelScalar - 0.79248 - 0.5 * log2( pow2( blinnShininessExponent ) + 1.0 );
 				return clamp( desiredMIPLevel, 0.0, maxMIPLevelScalar );
 			}
 
+            /*
+            funzione che converte rugosità per poter accedere al livello MipMap
+            */
 			float GGXRoughnessToBlinnExponent( const in float ggxRoughness ) {
 				return ( 2.0 / pow2( ggxRoughness + 0.0001 ) - 2.0 );
 			}
@@ -1416,6 +1491,7 @@
 			}
         </script>
 
+        <!-- fragment shader che non restituisce un colore riflessivo, ma combina irradiance map con cdiff -->
         <script type="text/x-glsl" id="fragmentIrr">
 			varying vec3 vNormal;
 			varying vec3 vTangent;
@@ -1469,6 +1545,7 @@
 			}
         </script>
 
+        <!-- fragment che aggiunge effetto glow al materiale-->>
         <script type="text/x-glsl" id="fragmentGlow">
 			varying vec3 vNormal;
 			varying vec3 vTangent;
@@ -1511,11 +1588,12 @@
 			}
         </script>
 
+        <!-- vertex shader custom che gestisce l'effetto glow-->
         <script type="text/x-glsl" id="vertexCustomGlow">
-            uniform vec3 viewVector;
-            uniform float c;
-            uniform float p;
-            varying float rangeIntensity;
+            uniform vec3 viewVector;//vettore della vista dalla camera
+            uniform float c;//fattore di confronto del dot product tra viewVector e normale, valori bassi nascondono l'effetto
+            uniform float p;//potenza dell'effetto, più è basso più è forte, valori alti portano a risultati molto trasparenti
+            varying float rangeIntensity;//fattore da passare al fragment shader
     
             void main() {
                 vec3 vNormal = normalize( normalMatrix * normal );
@@ -1524,8 +1602,9 @@
                 
                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
             }
-            </script>
+        </script>
 
+        <!-- fragment shader custom che gestisce l'effetto glow-->
         <script type="text/x-glsl" id="fragmentCustomGlow">
 			uniform vec3 glowColor;
             varying float rangeIntensity;
@@ -1537,6 +1616,7 @@
 			}
         </script>
 
+        <!-- fragment shader che gestisce l'effetto glass-->
         <script type="text/x-glsl" id="fragmentGlass">
 			varying vec3 vNormal;
 			varying vec3 vTangent;
@@ -1614,7 +1694,7 @@
 				cdiff = pow( cdiff, vec3(2.2));
 				cspec = getCSpec(cdiff, metalness);
 				cdiff = cdiff*(vec3(1)-metalness);
-                vec3 fresnel = FSchlick(vDoth, vec3(0.0));
+                vec3 fresnel = FSchlick(vDoth, cspec);
                 mapN.xy = normalScale * mapN.xy;
                 vec3 rRifr = normalize( refract(-worldV,worldN,1.0/2.42));//n1/n2-->3.0/3.0
                 vec3 envLightRifr=textureCube( envMap, vec3(-rRifr.x, rRifr.yz)).rgb;
@@ -1639,18 +1719,21 @@
 
 		<script>
 
+            /*
+            variabile che definisce l'effetto god rays globale
+            */
             THREE.VolumetericLightShader = {
                     uniforms: {
-                        tDiffuse: {value:null},
-                        lightPosition: {value: new THREE.Vector2(0.5, 0.5)},
-                        exposure: {value: 0.18},
-                        decay: {value: 0.95},
-                        density: {value: 0.8},
-                        weight: {value: 0.4},
-                        samples: {value: 50}
+                        tDiffuse: {value:null},//texture dalla passata precedente
+                        lightPosition: {value: new THREE.Vector2(0.5, 0.5)},//posizione luci, se non definita è 0.5,0.5
+                        exposure: {value: 0.18},//esposizione, se non definita è 0.18(intensità luminosa complessiva)
+                        decay: {value: 0.95},//decadimento, se non definito è 0.95(controlla la caduta della sorgente luminosa)
+                        density: {value: 0.8},//densità, se non definita è 0.8(separazione tra i campioni, se aumentato la separazione si riduce)
+                        weight: {value: 0.4},//peso, se non definita è 0.4(peso secondario sulla luminosità complessiva)
+                        samples: {value: 50}//numero campioni, se non definito è 50
                     },
 
-                    vertexShader: [
+                    vertexShader: [//definisci gl_Position e passa al fragment uv
                         "varying vec2 vUv;",
                         "void main() {",
                         "vUv = uv;",
@@ -1670,7 +1753,7 @@
                         "const int MAX_SAMPLES = 100;",
                         "void main()",
                         "{",
-                        "vec2 texCoord = vUv;",
+                        "vec2 texCoord = vUv;",//ottienmi le coordinate del tex
                         "vec2 deltaTextCoord = texCoord - lightPosition;",// Calculate vector from pixel to light source in screen space
                         "deltaTextCoord *= 1.0 / float(samples) * density;",// Divide by number of samples and scale by control factor
                         "vec4 color = texture2D(tDiffuse, texCoord);",// Store initial sample
@@ -1691,14 +1774,17 @@
                     ].join("\n")
                     };
 
+            /*
+            variabile che definisce lo shader per il blur verticale
+            */
             var blurShaderV = {
 
 			uniforms: {
-				"tDiffuse": { type: "t", value: null },
-                "v":        { type: "f", value: 1.0 / 512.0 }
+				"tDiffuse": { type: "t", value: null },//texture della precedente passata
+                "v":        { type: "f", value: 1.0 / 1080.0 }//reciproco della risoluzione settata a 1080
             },
 
-			vertexShader: [
+			vertexShader: [//definisci gl_Position e passa al fragment uv
 				"varying vec2 vUv;",
 				"void main() {",
 					"vUv = uv;",
@@ -1711,17 +1797,18 @@
                 "uniform float v;",
 				"void main(void)",
 				"{",
-                   "vec4 sum = vec4( 0.0 );",
+                   "vec4 sum = vec4( 0.0 );",//inizializza sum a 0
 
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 4.0 * v ) ) * 0.051;",
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 3.0 * v ) ) * 0.0918;",
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 2.0 * v ) ) * 0.12245;",
-                    "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 1.0 * v ) ) * 0.1531;",
-                    "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y ) ) * 0.1633;",
-                    "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y + 1.0 * v ) ) * 0.1531;",
+                    "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 1.0 * v ) ) * 0.1531;",//sotto
+                    "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y ) ) * 0.1633;",//centro
+                    "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y + 1.0 * v ) ) * 0.1531;",//sopra
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y + 2.0 * v ) ) * 0.12245;",
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y + 3.0 * v ) ) * 0.0918;",
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y + 4.0 * v ) ) * 0.051;",
+                    //influenza la coordinata y di vUv con v
 
                     "gl_FragColor = sum;",
             "}"
@@ -1830,14 +1917,17 @@
             ].join("\n")
         };
         
+            /*
+            variabile che definisce lo shader per il blur orizzontale
+            */
             var blurShaderO = {
 
                 uniforms: {
-                    "tDiffuse": { type: "t", value: null },
-                    "h":        { type: "f", value: 1.0 / 512.0 }
+                    "tDiffuse": { type: "t", value: null },//texture della precedente passata
+                    "h":        { type: "f", value: 1.0 / 1920.0 }//reciproco della risoluzione settata a 1920
                 },
 
-                vertexShader: [
+                vertexShader: [//definisci gl_Position e passa al fragment uv
                     "varying vec2 vUv;",
                     "void main() {",
                         "vUv = uv;",
@@ -1851,31 +1941,35 @@
                     "uniform float h;",
                     "void main(void)",
                     "{",
-                        "vec4 sum = vec4( 0.0 );",
+                        "vec4 sum = vec4( 0.0 );",//inizializza sum a 0
 
                         "sum += texture2D( tDiffuse, vec2( vUv.x - 4.0 * h, vUv.y ) ) * 0.051;",
                         "sum += texture2D( tDiffuse, vec2( vUv.x - 3.0 * h, vUv.y ) ) * 0.0918;",
                         "sum += texture2D( tDiffuse, vec2( vUv.x - 2.0 * h, vUv.y ) ) * 0.12245;",
-                        "sum += texture2D( tDiffuse, vec2( vUv.x - 1.0 * h, vUv.y ) ) * 0.1531;",
-                        "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y ) ) * 0.1633;",
-                        "sum += texture2D( tDiffuse, vec2( vUv.x + 1.0 * h, vUv.y ) ) * 0.1531;",
+                        "sum += texture2D( tDiffuse, vec2( vUv.x - 1.0 * h, vUv.y ) ) * 0.1531;",//sx
+                        "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y ) ) * 0.1633;",//centro
+                        "sum += texture2D( tDiffuse, vec2( vUv.x + 1.0 * h, vUv.y ) ) * 0.1531;",//dx
                         "sum += texture2D( tDiffuse, vec2( vUv.x + 2.0 * h, vUv.y ) ) * 0.12245;",
                         "sum += texture2D( tDiffuse, vec2( vUv.x + 3.0 * h, vUv.y ) ) * 0.0918;",
                         "sum += texture2D( tDiffuse, vec2( vUv.x + 4.0 * h, vUv.y ) ) * 0.051;",
+                        //influenza la coordinata x di vUv con h
 
                         "gl_FragColor = sum;",
                 "}"
                 ].join("\n")
             };
 
+            /*
+            variabile che rappresenta lo shader per l'effetto film con grana
+            */
             var FilmGrain = {
 
             uniforms: {
-                "tDiffuse": { type: "t", value: null },
-                "amount":        { type: "f", value: 5.0 }
+                "tDiffuse": { type: "t", value: null },//texture della precedente passata
+                "amount":        { type: "f", value: 5.0 }//float che rappresenta la forza dell'effetto
             },
 
-            vertexShader: [
+            vertexShader: [//definisci gl_Position e passa al fragment uv
                 "varying vec2 vUv;",
                 "void main() {",
                     "vUv = uv;",
@@ -1888,26 +1982,25 @@
                 "varying vec2 vUv;",
                 "uniform float amount;",
 
-                "float random( vec2 p )",
+                "float random( vec2 p )",//funzione casuale per randomizzare posizione della texture noise
                 "{",
                    " vec2 K1 = vec2(",
                         "23.14069263277926,", // e^pi (Gelfond's constant)
                         "2.665144142690225", // 2^sqrt(2) (Gelfond–Schneider constant)
                     ");",
-                    "return fract( cos( dot(p,K1) ) * 12345.6789 );",
+                    "return fract( cos( dot(p,K1) ) * 12345.6789 );",//ritorna la parte frazionale del prodotto di 12345.6789 con il coseno del dot product di p e k1
                 "}",
 
                 "void main()",
                 "{",
-                    "vec4 color = texture2D( tDiffuse, vUv );",
-                    "vec2 uvRandom = vUv;",
-                    "uvRandom.y *= random(vec2(uvRandom.y,amount));",
-                    "color.rgb += random(uvRandom)*0.15;",
+                    "vec4 color = texture2D( tDiffuse, vUv );",//colore ottenuto dalla texture della passata precedente
+                    "vec2 uvRandom = vUv;",//copia vUv
+                    "uvRandom.y *= random(vec2(uvRandom.y,amount));",//randomizza la componente y di uvRandom con un valore pari ad amount
+                    "color.rgb += random(uvRandom)*0.15;",//randomizza ulteriormente uvRandom moltiplicalo per 0.15 e somma questo valore alle componenti rgb di color
                     "gl_FragColor = vec4( color );",
             "}"
             ].join("\n")
             };
-
 
             //variabili per la gestione delle texture, dell'oggetto 3d, dei parametri d'interazione con l'utente
             var renderer = new THREE.WebGLRenderer({ canvas: productCanvas , antialias: true } );
@@ -2256,10 +2349,10 @@
 			    "p":   { type: "f", value: 2.0 },//fattore che indica la potenza dell'effetto(più piccola è meglio)
 			    glowColor: { type: "c", value: new THREE.Color(0xffff00) },
 			    viewVector: { type: "v3", value: camera.position }},vertexShader:vsCG,fragmentShader:fsCG,side: THREE.FrontSide,
-		blending: THREE.AdditiveBlending,//modalità blending additiva per gestire trasparenza materiale con altri elementi opachi
-		transparent: true});
-        customGlowMaterial.vertexTangents=true;
-        customGlowMaterial.needsUpdate=true;
+                blending: THREE.AdditiveBlending,//modalità blending additiva per gestire trasparenza materiale con altri elementi opachi
+                transparent: true});
+            customGlowMaterial.vertexTangents=true;
+            customGlowMaterial.needsUpdate=true;
 			
             //caricamento di default del primo modello (ascia)
 			var loader = new THREE.GLTFLoader();
