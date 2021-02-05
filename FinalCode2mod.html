@@ -1545,7 +1545,7 @@
 			}
         </script>
 
-        <!-- fragment che aggiunge effetto glow al materiale-->>
+        <!-- fragment che aggiunge effetto glow al materiale-->
         <script type="text/x-glsl" id="fragmentGlow">
 			varying vec3 vNormal;
 			varying vec3 vTangent;
@@ -2868,8 +2868,6 @@
                 uniforms5.irradianceMap.value=irradianceMap;
             }
 
-			var stats = new Stats();
-
 			function loadTexture(file) {
 					var texture = new THREE.TextureLoader().load( file , function ( texture ) {
 
@@ -2906,10 +2904,6 @@
 				controls.update();
 
 				window.addEventListener( 'resize', onResize, false );
-
-			    stats.domElement.style.position = 'absolute';
-			    stats.domElement.style.top = '0px';
-			    document.body.appendChild( stats.domElement );
 
                 
                     composer = new THREE.EffectComposer( renderer);
@@ -2961,7 +2955,6 @@
                     copyMesh4.material.uniforms.viewVector.value = 
 		            new THREE.Vector3().subVectors( camera.position, copyMesh4.position );
                 }
-				stats.update();
 				render();
 			}
 
