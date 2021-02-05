@@ -76,6 +76,18 @@ Object.assign( THREE.EffectComposer.prototype, {
 
 	},
 
+	removePass: function ( pass ) {
+
+		const index = this.passes.indexOf( pass );
+
+		if ( index !== - 1 ) {
+
+			this.passes.splice( index, 1 );
+
+		}
+
+	},
+
 	insertPass: function ( pass, index ) {
 
 		this.passes.splice( index, 0, pass );

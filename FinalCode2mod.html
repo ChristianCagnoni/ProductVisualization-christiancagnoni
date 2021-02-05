@@ -42,6 +42,7 @@
                         <label>Blurred:<input id="blurred" onchange="changeBlurred()" type="checkbox"></label>
                         <label>Film Grain:<input id="film" onchange="changeFilm()" type="checkbox"></label>
                         <label>Remove Reflections:<input id="iem" onchange="changeIem()" type="checkbox"></label>
+                        <label>Cinema Light:<input id="aces" onchange="chnageToneMap()" type="checkbox"></label>
                         <label>Light Intensity:<input id="lighIntensity" onchange="changeIntensity(value)" type="range" min="0.1" max="10.0" step="0.1"></label>
                         <label>
                             Background:
@@ -189,6 +190,17 @@
                 }
             }
 
+            function chnageToneMap(){
+                var aces=document.getElementById("aces");
+                if(aces.checked==true){
+                    aces_TM=new THREE.ShaderPass( toneMap_ACES );
+                    composer.addPass(aces_TM);
+                    aces_TM.renderToScreen=true;
+                }else{
+                    composer.removePass(aces_TM);
+                }
+            }
+
             /*
             funzione che gestisce l'effetto film della grana, se attivo viene aggiunto come 
             passata del composer
@@ -198,6 +210,11 @@
                 var x = document.getElementById("globalGodrays");
                 var y = document.getElementById("localGodrays");
                 var z = document.getElementById("blurred");
+                var aces=document.getElementById("aces");
+                if(aces.checked==true){
+                    composer.removePass(aces_TM);
+                    aces.checked=false;
+                }
                 if(film.checked==true){
                     x.checked=false;
                     changeGodRaysGlob();
@@ -222,6 +239,11 @@
             function changeIem(){
                 var iem=document.getElementById("iem");
                 var prod=document.getElementById("products").value;
+                var aces=document.getElementById("aces");
+                if(aces.checked==true){
+                    composer.removePass(aces_TM);
+                    aces.checked=false;
+                }
                 if(iem.checked==true){
                     document.getElementById("glass").disabled=true;
                     document.getElementById("glow").disabled=true;
@@ -285,6 +307,11 @@
                 var anim=document.getElementById("animated");
                 var iem=document.getElementById("iem");
                 iem.checked=false;
+                var aces=document.getElementById("aces");
+                if(aces.checked==true){
+                    composer.removePass(aces_TM);
+                    aces.checked=false;
+                }
 
                 if(copyMesh!=undefined && mat1!="glow"){
                         scene.remove(copyMesh);
@@ -585,6 +612,11 @@
                 var film=document.getElementById("film");
                 var pass;
                 var pass2
+                var aces=document.getElementById("aces");
+                if(aces.checked==true){
+                    composer.removePass(aces_TM);
+                    aces.checked=false;
+                }
                 if(x.checked==true){
                     y.checked=false;
                     changeGodRays();
@@ -644,6 +676,11 @@
                 var prod= document.getElementById("products").value;
                 var price=document.getElementById("price");
                 var film=document.getElementById("film");
+                var aces=document.getElementById("aces");
+                if(aces.checked==true){
+                    composer.removePass(aces_TM);
+                    aces.checked=false;
+                }
                 if(x.checked==true){
                     y.checked=false;
                     changeGodRaysGlob();
@@ -745,6 +782,11 @@
                 var z = document.getElementById("globalGodrays");
                 var film=document.getElementById("film");
                 var price=document.getElementById("price");
+                var aces=document.getElementById("aces");
+                if(aces.checked==true){
+                    composer.removePass(aces_TM);
+                    aces.checked=false;
+                }
                 if(x.checked==true){
                     y.checked=false;
                     changeGodRays();
@@ -2005,6 +2047,103 @@
             ].join("\n")
             };
 
+            var toneMap_ACES={
+                //https://github.com/TheRealMJP/BakingLab/blob/master/BakingLab/ACES.hlsl
+                //https://computergraphics.stackexchange.com/questions/9834/how-to-convert-from-xyz-or-srgb-to-acescg-ap1
+                //https://github.com/selfshadow/ltc_code/blob/master/webgl/shaders/ltc/ltc_blit.fs
+                //https://knarkowicz.wordpress.com/2016/01/06/aces-filmic-tone-mapping-curve/
+
+                uniforms: {
+                "tDiffuse": { type: "t", value: null },//texture della precedente passata
+            },
+
+            vertexShader: [//definisci gl_Position e passa al fragment uv
+                "varying vec2 vUv;",
+                "void main() {",
+                    "vUv = uv;",
+                    "gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );",
+                "}"
+            ].join("\n"),
+
+            // The code in this file was originally written by Stephen Hill (@self_shadow), who deserves all
+            // credit for coming up with this fit and implementing it. Buy him a beer next time you see him.
+            //This is the default TMO used by Unreal Engine 4
+            //https://64.github.io/tonemapping/
+
+            fragmentShader: [
+                "uniform sampler2D tDiffuse;",
+                "varying vec2 vUv;",
+
+                    "vec3 rrt_odt_fit(vec3 v)",
+                    "{",
+                        "vec3 a = v*(         v + 0.0245786) - 0.000090537;",
+                        "vec3 b = v*(0.983729*v + 0.4329510) + 0.238081;",
+                        "return a/b;",
+                    "}",
+
+                   " mat3 mat3_from_rows(vec3 c0, vec3 c1, vec3 c2)",
+                    "{",
+                        "mat3 m = mat3(c0, c1, c2);",
+                        "m = transpose(m);",
+
+                        "return m;",
+                    "}",
+
+                    "vec3 mul(mat3 m, vec3 v)",
+                    "{",
+                        "return m * v;",
+                    "}",
+
+                    "float saturate(float v)",
+                    "{",
+                        "return clamp(v, 0.0, 1.0);",
+                    "}",
+
+                    "vec3 saturate(vec3 v)",
+                    "{",
+                        "return vec3(saturate(v.x), saturate(v.y), saturate(v.z));",
+                    "}",
+
+                    //https://acescolorspace.com/
+                    //https://en.wikipedia.org/wiki/Academy_Color_Encoding_System
+                    "vec3 aces_fitted(vec3 color)",
+                    "{",
+                        //“ACES Primaries” #1
+                        // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT //The Reference Rendering Transform 
+                        "mat3 ACES_INPUT_MAT = mat3_from_rows(",
+                            "vec3( 0.59719, 0.35458, 0.04823),",
+                            "vec3( 0.07600, 0.90834, 0.01566),",
+                            "vec3( 0.02840, 0.13383, 0.83777));",
+
+                        //The Output Display Transform
+                        // ODT_SAT => XYZ => D60_2_D65 => sRGB
+                        "mat3 ACES_OUTPUT_MAT = mat3_from_rows(",
+                            "vec3( 1.60475,-0.53108,-0.07367),",
+                            "vec3(-0.10208, 1.10813,-0.00605),",
+                            "vec3(-0.00327,-0.07276, 1.07602));",
+
+                        "color = mul(ACES_INPUT_MAT, color);",
+
+                        // Apply RRT and ODT
+                        "color = rrt_odt_fit(color);",
+
+                        "color = mul(ACES_OUTPUT_MAT, color);",
+
+                        // Clamp to [0, 1]
+                        "color = saturate(color);",
+
+                        "return color;",
+                    "}",
+
+                    "void main()",
+                    "{",
+                        "vec4 color = texture2D( tDiffuse, vUv );",//colore ottenuto dalla texture della passata precedente
+                        "gl_FragColor = vec4( aces_fitted(color.rgb),color.a );",
+            "}"
+            ].join("\n")
+
+            };
+
             //variabili per la gestione delle texture, dell'oggetto 3d, dei parametri d'interazione con l'utente
             var renderer = new THREE.WebGLRenderer({ canvas: productCanvas , antialias: true } );
 			var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1.0, 50000.0 );
@@ -2031,6 +2170,7 @@
             var copyMesh2;
             var copyMesh3;
             var copyMesh4;
+            var aces_TM;
 
             //composer = new POSTPROCESSING.EffectComposer(renderer);
             //let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
@@ -2913,6 +3053,8 @@
                     composer.addPass( new THREE.RenderPass( scene, camera ) );
 
 			}
+
+            var pass4;
 
             //funzioni che gestiscono il funzionamento generale
 			function onResize() {
