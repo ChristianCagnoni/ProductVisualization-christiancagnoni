@@ -2007,7 +2007,7 @@
 
             //variabili per la gestione delle texture, dell'oggetto 3d, dei parametri d'interazione con l'utente
             var renderer = new THREE.WebGLRenderer({ canvas: productCanvas , antialias: true } );
-			var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 50000 );
+			var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1.0, 50000.0 );
 			var controls = new THREE.OrbitControls( camera, renderer.domElement );
 			var scene = new THREE.Scene();
             var obj=new THREE.Object3D();
@@ -2348,7 +2348,7 @@
             glowMaterial.needsUpdate=true;
 
             var customGlowMaterial=new THREE.ShaderMaterial({uniforms:{
-                "c":   { type: "f", value: 1.0 },//soglia del dot products tra normale e view camera, influisce su quantità di flow visibile
+                "c":   { type: "f", value: 1.25 },//soglia del dot products tra normale e view camera, influisce su quantità di flow visibile
 			    "p":   { type: "f", value: 2.0 },//fattore che indica la potenza dell'effetto(più piccola è meglio)
 			    glowColor: { type: "c", value: new THREE.Color(0xffff00) },
 			    viewVector: { type: "v3", value: camera.position }},vertexShader:vsCG,fragmentShader:fsCG,side: THREE.FrontSide,
@@ -2940,23 +2940,23 @@
                 }
                 if(copyMesh!=undefined){
                     copyMesh.material.uniforms.viewVector.value = 
-		            new THREE.Vector3().subVectors( camera.position, copyMesh.position );
+		            new THREE.Vector3().subVectors( camera.position, copyMesh.position );//camera.position - copyMesh.position
                 }
                 if(copyMesh1!=undefined){
                     copyMesh1.material.uniforms.viewVector.value = 
-		            new THREE.Vector3().subVectors( camera.position, copyMesh1.position );
+		            new THREE.Vector3().subVectors( camera.position, copyMesh1.position );//camera.position - copyMesh1.position
                 }
                 if(copyMesh2!=undefined){
                     copyMesh2.material.uniforms.viewVector.value = 
-		            new THREE.Vector3().subVectors( camera.position, copyMesh2.position );
+		            new THREE.Vector3().subVectors( camera.position, copyMesh2.position );//camera.position - copyMesh2.position
                 }
                 if(copyMesh3!=undefined){
                     copyMesh3.material.uniforms.viewVector.value = 
-		            new THREE.Vector3().subVectors( camera.position, copyMesh3.position );
+		            new THREE.Vector3().subVectors( camera.position, copyMesh3.position );//camera.position - copyMesh3.position
                 }
                 if(copyMesh4!=undefined){
                     copyMesh4.material.uniforms.viewVector.value = 
-		            new THREE.Vector3().subVectors( camera.position, copyMesh4.position );
+		            new THREE.Vector3().subVectors( camera.position, copyMesh4.position );//camera.position - copyMesh4.position
                 }
 				render();
 			}
