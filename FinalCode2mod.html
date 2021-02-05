@@ -1596,9 +1596,9 @@
             varying float rangeIntensity;//fattore da passare al fragment shader
     
             void main() {
-                vec3 vNormal = normalize( normalMatrix * normal );
-                vec3 vNormel = normalize( normalMatrix * viewVector );
-                rangeIntensity = pow( c - dot(vNormal, vNormel), p );
+                vec3 vNormal = normalize( normalMatrix * normal );//normal in word space
+                vec3 vNormel = normalize( normalMatrix * viewVector );//viewVector in word space (calculate a viewVector uniform, or the angle at which we are viewing the object)
+                rangeIntensity = pow( c - dot(vNormal, vNormel), p );//power of a constant (c) minus the current normal in relation to view times p
                 
                 gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
             }
