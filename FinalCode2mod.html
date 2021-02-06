@@ -360,11 +360,6 @@
                         uniforms1.AOMap.value = loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
                         uniforms2.AOMap.value = loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
 			            uniforms3.AOMap.value = loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
-                        material.texture1='MetalAxe';
-                        material.texture2='GoldAxe';
-                        material.texture3='WoodAxe';
-                        material.texture4='';
-                        material.texture5='';
                         mat1.value="metalAxe";
                         mat2.value="goldAxe";
                         mat3.value="woodAxe";
@@ -405,11 +400,6 @@
                         uniforms1.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal003_2K_AO.jpg" );
                         uniforms2.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
 			            uniforms3.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal005_2K_AO.jpg" );
-                        material.texture1='BlueShield';
-                        material.texture2='RedShield';
-                        material.texture3='GreenShield';
-                        material.texture4='';
-                        material.texture5='';
                         mat1.value="blueShield";
                         mat2.value="redShield";
                         mat3.value="greenShield";
@@ -450,11 +440,6 @@
                         uniforms1.AOMap.value = loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
                         uniforms2.AOMap.value = loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
 			            uniforms3.AOMap.value = loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
-                        material.texture1='GoldSword';
-                        material.texture2='SilverSword';
-                        material.texture3='RedSword';
-                        material.texture4='';
-                        material.texture5='';
                         mat1.value="goldSword";
                         mat2.value="silverSword";
                         mat3.value="redSword";
@@ -507,11 +492,6 @@
                         uniforms5.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
                         uniforms5.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
                         uniforms5.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
-                        material.texture1='RedSword';
-                        material.texture2='SilverSword';
-                        material.texture3='MetalAxe';
-                        material.texture4='GoldSword';
-                        material.texture5='RedShield';
                         mat1.value="redSword";
                         mat2.value="silverSword";
                         mat3.value="metalAxe";
@@ -688,12 +668,6 @@
                     changeBlurred();
                     film.checked=false;
                     changeFilm();
-
-                    /*let areaImage = new Image();
-                    areaImage.src = POSTPROCESSING.SMAAEffect.areaImageDataURL;
-                    let searchImage = new Image();
-                    searchImage.src = POSTPROCESSING.SMAAEffect.searchImageDataURL;
-                    let smaaEffect = new POSTPROCESSING.SMAAEffect(searchImage,areaImage,3,2);*/
                     let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, emMesh, {
                             resolutionScale: 1,
                             density: 0.8,
@@ -738,13 +712,13 @@
                     composer.addPass(renderPass);
                     var effectPass;
                     if(prod!="sickle"){
-                            effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect1,godraysEffect2/*,smaaEffect*/);
+                            effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect1,godraysEffect2);
                             effectPass.renderToScreen = true;
                             composer.addPass(effectPass);
                             emMesh.material.transparent=false;
                             emMesh.material.depthWrite=true;
                     }else{
-                            effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect4/*,smaaEffect*/);
+                            effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect4);
                             effectPass.renderToScreen = true;
                             composer.addPass(effectPass);
                             emMesh1.material.transparent=false;
@@ -897,7 +871,7 @@
                             copyMesh.position.z=emMesh.position.z;
                         }else if(p=="shield"){
                             copyMesh.position.z=emMesh.position.z;
-                            copyMesh.position.x=emMesh.position.x;//+0.15;
+                            copyMesh.position.x=emMesh.position.x;
                         }else if(p=="sword"){
                             copyMesh.position.z=emMesh.position.z;
                             copyMesh.rotation.y=emMesh.rotation.y;
@@ -1006,13 +980,13 @@
                         if(p!="sickle")copyMesh1.scale.multiplyScalar(0.15);
                         scene.add(copyMesh1);
                         if(p=="axe"){
-                            copyMesh1.position.z=emMesh1.position.z;//-0.3;
+                            copyMesh1.position.z=emMesh1.position.z;
                         }else if(p=="shield"){
                             copyMesh1.position.z=emMesh1.position.z;
-                            copyMesh1.position.x=emMesh1.position.x;//+0.3;
+                            copyMesh1.position.x=emMesh1.position.x;
                         }else if(p=="sword"){
                             copyMesh1.rotation.y=emMesh1.rotation.y;
-                            copyMesh1.position.y=emMesh1.position.y;//-0.1;
+                            copyMesh1.position.y=emMesh1.position.y;
                             copyMesh1.position.y+=0.2;
                         }else{
                             copyMesh1.scale.y=5.5;
@@ -1117,13 +1091,13 @@
                         if(p!="sickle")copyMesh2.scale.multiplyScalar(0.15);
                         scene.add(copyMesh2);
                         if(p=="axe"){
-                            copyMesh2.position.z=emMesh2.position.z;//+0.6;
+                            copyMesh2.position.z=emMesh2.position.z;
                         }else if(p=="shield"){
                             copyMesh2.position.z=emMesh2.position.z;
-                            copyMesh2.position.x=emMesh2.position.x;//+0.3;
+                            copyMesh2.position.x=emMesh2.position.x;
                         }else if(p=="sword"){
                             copyMesh2.rotation.y=emMesh2.rotation.y;
-                            copyMesh2.position.y=emMesh2.position.y;//-0.1;
+                            copyMesh2.position.y=emMesh2.position.y;
                             copyMesh2.position.y+=0.2;
                         }else{
                             copyMesh2.scale.y=4.6;
@@ -1225,9 +1199,6 @@
                         copyMesh3=undefined;
                         copyMesh3=new THREE.Mesh(emMesh3.geometry.clone(),customGlowMaterial);
                         scene.add(copyMesh3);
-                        /*copyMesh3.scale.y=emMesh3.scale.y+0.05;
-                        copyMesh3.scale.x=emMesh3.scale.x+0.15;
-                        copyMesh3.scale.z=emMesh3.scale.z+0.05;*/
                         copyMesh3.scale.y=4.6;
                         copyMesh3.scale.x=0.15;
                         copyMesh3.scale.z=0.15;
@@ -1329,9 +1300,6 @@
                         copyMesh4.position.y=emMesh4.position.y;
                         copyMesh4.position.x=emMesh4.position.x;
                         copyMesh4.position.z=emMesh4.position.z;
-                        /*copyMesh4.scale.y=emMesh4.scale.y+0.05;
-                        copyMesh4.scale.x=emMesh4.scale.x+0.15;
-                        copyMesh4.scale.z=emMesh4.scale.z+0.05;*/
                         copyMesh4.scale.y=4.6;
                         copyMesh4.scale.x=0.15;
                         copyMesh4.scale.z=0.15;
@@ -1388,7 +1356,6 @@
             varying vec3 wPosition;
 			varying vec2 vUv;
 			uniform vec3 clight;
-			uniform vec3 ambientLight;
             uniform sampler2D normalMap;
             uniform sampler2D roughnessMap;
             uniform sampler2D specularMap;
@@ -1401,21 +1368,13 @@
             uniform vec2 normalScale;
             uniform vec3 pointLightPosition;
             uniform float intensity;
-            uniform float em;
             const float PI = 3.14159;
             uniform vec3 emissiveC;
-            uniform float glass;
-            uniform float n1;
-            uniform float n2;
-            
             uniform sampler2D noiseTexture;
             uniform float time;
             float speed=0.25;
-            uniform float animEn;
-            
-			
+            uniform float animEn;		
 			#define saturate(a) clamp( a, 0.0, 1.0 )
-
             vec3 metalness;
             vec3 cdiff;
             vec3 cspec;
@@ -1546,7 +1505,6 @@
             uniform samplerCube irradianceMap;
             uniform vec2 textureRepeat;
             uniform float intensity;
-
             uniform sampler2D noiseTexture;
             uniform float time;
             float speed=0.25;
@@ -1602,7 +1560,6 @@
             uniform sampler2D glowMap;
             uniform vec3 emissiveC;
             uniform float intensity;
-
             vec3 cdiff;
             
             vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
@@ -1677,7 +1634,6 @@
             uniform vec2 normalScale;
             uniform samplerCube envMap;
             uniform float intensity;
-
             vec3 cdiff;
             vec3 cspec;
             vec3 metalness;
@@ -2172,11 +2128,6 @@
             var copyMesh4;
             var aces_TM;
 
-            //composer = new POSTPROCESSING.EffectComposer(renderer);
-            //let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
-            //renderPass.renderToScreen = true;
-            //composer.addPass(renderPass);
-
 			var normalMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
             var normalMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
             var normalMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
@@ -2327,18 +2278,13 @@
 					normalMap:	{ type: "t", value: normalMap1},
                     AOMap: {type: "t", value: aoMap1},
 					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
-                    n1:{type:"f",value:textureParameters.nu},
-					n2:{type:"f",value:textureParameters.nd},
 					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
 					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
                     intensity: {type: "f", value: lightSettings.intensity},
-                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
                     textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
                     envMap:	{ type: "t", value: textureCube},
-                    em : {type: "f",value: em.uno},
                     glowMap:{type:"t",value:glowMap},
                     emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
-                    glass : {type: "f",value: glass.uno},
                     noiseTexture:{type:"t",value:noiseTexture},
 		            time:{ type: "f", value: 1.0 },
                     animEn:{type:"f",value:0.0},
@@ -2352,18 +2298,13 @@
 					normalMap:	{ type: "t", value: normalMap2},
                     AOMap: {type: "t", value: aoMap2},
 					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
-                    n1:{type:"f",value:textureParameters.nu},
-					n2:{type:"f",value:textureParameters.nd},
 					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
 					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
                     intensity: {type: "f", value: lightSettings.intensity},
-                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
                     textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
                     envMap:	{ type: "t", value: textureCube},
-                    em : {type: "f",value: em.due},
                     glowMap:{type:"t",value:glowMap},
                     emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
-                    glass : {type: "f",value: glass.due},
                     noiseTexture:{type:"t",value:noiseTexture},
 		            time:{ type: "f", value: 1.0 },
                     animEn:{type:"f",value:0.0},
@@ -2377,18 +2318,13 @@
 					normalMap:	{ type: "t", value: normalMap3},
                     AOMap: {type: "t", value: aoMap3},
 					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
-                    n1:{type:"f",value:textureParameters.nu},
-					n2:{type:"f",value:textureParameters.nd},
 					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
 					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
                     intensity: {type: "f", value: lightSettings.intensity},
-                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
                     textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
                     envMap:	{ type: "t", value: textureCube},
-                    em : {type: "f",value: em.tre},
                     glowMap:{type:"t",value:glowMap},
                     emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
-                    glass : {type: "f",value: glass.tre},
                     noiseTexture:{type:"t",value:noiseTexture},
 		            time:{ type: "f", value: 1.0 },
                     animEn:{type:"f",value:0.0},
@@ -2402,18 +2338,13 @@
 					normalMap:	{ type: "t", value: normalMap4},
                     AOMap: {type: "t", value: aoMap4},
 					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
-                    n1:{type:"f",value:textureParameters.nu},
-					n2:{type:"f",value:textureParameters.nd},
 					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
 					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
                     intensity: {type: "f", value: lightSettings.intensity},
-                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
                     textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
                     envMap:	{ type: "t", value: textureCube},
-                    em : {type: "f",value: em.quattro},
                     glowMap:{type:"t",value:glowMap},
                     emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
-                    glass : {type: "f",value: glass.quattro},
                     noiseTexture:{type:"t",value:noiseTexture},
 		            time:{ type: "f", value: 1.0 },
                     animEn:{type:"f",value:0.0},
@@ -2427,18 +2358,13 @@
 					normalMap:	{ type: "t", value: normalMap5},
                     AOMap: {type: "t", value: aoMap5},
 					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
-                    n1:{type:"f",value:textureParameters.nu},
-					n2:{type:"f",value:textureParameters.nd},
 					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
 					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
                     intensity: {type: "f", value: lightSettings.intensity},
-                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
                     textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
                     envMap:	{ type: "t", value: textureCube},
-                    em : {type: "f",value: em.cinque},
                     glowMap:{type:"t",value:glowMap},
                     emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
-                    glass : {type: "f",value: glass.cinque},
                     noiseTexture:{type:"t",value:noiseTexture},
 		            time:{ type: "f", value: 1.0 },
                     animEn:{type:"f",value:0.0},
@@ -2501,43 +2427,6 @@
 			var loader = new THREE.GLTFLoader();
 			loader.useIndices = true;
 			loader.load( "models/axes5.glb", function ( model ) {
-					/*console.log(model);
-					geometry= model.scene.children[0].children[0].geometry;
-					geometry.center();
-					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					emMesh.scale.multiplyScalar( 0.1 );
-					emMesh.position.x=0;
-					emMesh.position.y=0;
-					emMesh.position.z=0.92;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh);
-					scene.add( emMesh );
-                    obj.add(emMesh);
-
-					geometry= model.scene.children[0].children[1].geometry;
-					geometry.center();
-					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
-					emMesh1.scale.multiplyScalar( 0.1 );
-					emMesh1.position.x=0;
-					emMesh1.position.y=-0.015;
-					emMesh1.position.z=0.3925;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh1);
-                    scene.add( emMesh1 );
-                    obj.add(emMesh1);
-                    
-                    geometry= model.scene.children[0].children[2].geometry;
-					geometry.center();
-					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
-                    emMesh2.scale.multiplyScalar( 0.1 );
-					emMesh2.position.x=0;
-					emMesh2.position.y=0;
-					emMesh2.position.z=2;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh2);
-					scene.add( emMesh2 );
-                    obj.add(emMesh2);*/
-
                     console.log(model);
                     model.scene.children[0].children[0].material=ourMaterial[0];
                     emMesh=model.scene.children[0].children[0];
@@ -2565,43 +2454,6 @@
                 var loader = new THREE.GLTFLoader();
 			    loader.useIndices = true;
 				loader.load( "models/axes5.glb", function ( model ) {
-					/*console.log(model);
-					geometry= model.scene.children[0].children[0].geometry;
-					geometry.center();
-					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					emMesh.scale.multiplyScalar( 0.1 );
-					emMesh.position.x=0;
-					emMesh.position.y=0;
-					emMesh.position.z=0.92;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh);
-					scene.add( emMesh );
-                    obj.add(emMesh);
-
-					geometry= model.scene.children[0].children[1].geometry;
-					geometry.center();
-					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
-					emMesh1.scale.multiplyScalar( 0.1 );
-					emMesh1.position.x=0;
-					emMesh1.position.y=-0.015;
-					emMesh1.position.z=0.3925;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh1);
-                    scene.add( emMesh1 );
-                    obj.add(emMesh1);
-                    
-                    geometry= model.scene.children[0].children[2].geometry;
-					geometry.center();
-					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
-                    emMesh2.scale.multiplyScalar( 0.1 );
-					emMesh2.position.x=0;
-					emMesh2.position.y=0;
-					emMesh2.position.z=2;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh2);
-					scene.add( emMesh2 );
-                    obj.add(emMesh2);*/
-
                     console.log(model);
                     model.scene.children[0].children[0].material=ourMaterial[0];
                     emMesh=model.scene.children[0].children[0];
@@ -2618,7 +2470,7 @@
                     obj.add(emMesh);
                     obj.add(emMesh1);
                     obj.add(emMesh2);
-                    //obj.scale.multiplyScalar(0.1);
+                    obj.scale.y=0.1;
                     scene.add(model.scene.children[0]);
 
 				} );
@@ -2629,73 +2481,6 @@
                 var loader = new THREE.GLTFLoader();
 			    loader.useIndices = true;
 				loader.load( "models/falce.glb", function ( model ) {
-					/*console.log(model);
-					geometry= model.scene.children[0].children[0].geometry;
-					geometry.center();
-					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					emMesh.scale.multiplyScalar( 0.1 );
-					emMesh.position.x=0;
-					emMesh.position.y=0;
-					emMesh.position.z=0;
-                    emMesh.scale.y+=2.5;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh);
-					scene.add( emMesh );
-                    obj.add(emMesh);
-
-					geometry= model.scene.children[0].children[1].geometry;
-					geometry.center();
-					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
-					emMesh1.scale.multiplyScalar( 0.1 );
-					emMesh1.position.x=0;
-					emMesh1.position.y=0;
-					emMesh1.position.z=0;
-                    emMesh1.scale.y+=2.5;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh1);
-                    scene.add( emMesh1 );
-                    obj.add(emMesh1);
-                    
-                    geometry= model.scene.children[0].children[2].geometry;
-					geometry.center();
-					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
-                    emMesh2.scale.multiplyScalar( 0.1 );
-					emMesh2.position.x=0;
-					emMesh2.position.y=0;
-					emMesh2.position.z=0;
-                    emMesh2.scale.y+=2.5;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh2);
-					scene.add( emMesh2 );
-                    obj.add(emMesh2);
-
-                    geometry= model.scene.children[0].children[3].geometry;
-					geometry.center();
-					emMesh3 = new THREE.Mesh(geometry,ourMaterial[3]);
-                    emMesh3.scale.multiplyScalar( 0.1 );
-					emMesh3.position.x=0;
-					emMesh3.position.y=0;
-					emMesh3.position.z=0;
-                    emMesh3.scale.y+=2.475;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh3);
-					scene.add( emMesh3 );
-                    obj.add(emMesh3);
-
-                    geometry= model.scene.children[0].children[4].geometry;
-					geometry.center();
-					emMesh4 = new THREE.Mesh(geometry,ourMaterial[4]);
-                    emMesh4.scale.multiplyScalar( 0.1 );
-					emMesh4.position.x=0.05;
-					emMesh4.position.y=2.175;
-					emMesh4.position.z=-0.9;
-                    emMesh4.scale.y+=2.5;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh4);
-					scene.add( emMesh4 );
-                    obj.add(emMesh4);
-                    obj.scale=0.5;*/
-
                     console.log(model);
                     model.scene.children[0].children[0].material=ourMaterial[0];
                     emMesh=model.scene.children[0].children[0];
@@ -2732,36 +2517,6 @@
                 var loader = new THREE.GLTFLoader();
 			    loader.useIndices = true;
 				loader.load( "models/shield3.glb", function ( model ) {
-					/*console.log(model);
-					geometry= model.scene.children[0].children[0].geometry;
-					geometry.center();
-					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					emMesh.scale.multiplyScalar( 0.1 );
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh);
-					scene.add( emMesh );
-                    obj.add(emMesh);
-
-					geometry= model.scene.children[0].children[1].geometry;
-					geometry.center();
-					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
-					emMesh1.scale.multiplyScalar( 0.1 );
-                    emMesh1.position.x+=0.23;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh1);
-                    scene.add( emMesh1 );
-                    obj.add(emMesh1);
-                    
-                    geometry= model.scene.children[0].children[2].geometry;
-					geometry.center();
-					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
-                    emMesh2.scale.multiplyScalar( 0.1 );
-                    emMesh2.position.x+=0.128;
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    objects.push(emMesh2);
-					scene.add( emMesh2 );
-                    obj.add(emMesh2);*/
-
                     console.log(model);
                     model.scene.children[0].children[0].material=ourMaterial[0];
                     emMesh=model.scene.children[0].children[0];
@@ -2778,7 +2533,7 @@
                     obj.add(emMesh);
                     obj.add(emMesh1);
                     obj.add(emMesh2);
-                    //obj.scale.multiplyScalar(0.1);
+                    obj.scale.y=0.1;
                     scene.add(model.scene.children[0]);
 
 				} );
@@ -2788,39 +2543,6 @@
                 var loader = new THREE.GLTFLoader();
 			    loader.useIndices = true;
 				loader.load( "models/sword.glb", function ( model ) {
-					/*console.log(model);
-					geometry= model.scene.children[0].children[0].geometry;
-					geometry.center();
-					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
-					emMesh.scale.multiplyScalar( 0.1 );
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    emMesh.rotation.y+=90*Math.PI/180;
-                    objects.push(emMesh);
-					scene.add( emMesh );
-                    obj.add(emMesh);
-
-					geometry= model.scene.children[0].children[1].geometry;
-					geometry.center();
-					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
-                    emMesh1.scale.multiplyScalar( 0.1 );
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    emMesh1.position.y-=1.0455;
-                    emMesh1.rotation.y+=90*Math.PI/180;
-                    objects.push(emMesh1);
-                    scene.add( emMesh1 );
-                    obj.add(emMesh1);
-                    
-                    geometry= model.scene.children[0].children[2].geometry;
-					geometry.center();
-					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
-                    emMesh2.scale.multiplyScalar( 0.1 );
-					THREE.BufferGeometryUtils.computeTangents(geometry);
-                    emMesh2.position.y-=1.09;
-                    emMesh2.rotation.y+=90*Math.PI/180;
-                    objects.push(emMesh2);
-					scene.add( emMesh2 );
-                    obj.add(emMesh2);*/
-
                     console.log(model);
                     model.scene.children[0].children[0].material=ourMaterial[0];
                     emMesh=model.scene.children[0].children[0];
@@ -2837,7 +2559,7 @@
                     obj.add(emMesh);
                     obj.add(emMesh1);
                     obj.add(emMesh2);
-                    //obj.scale.multiplyScalar(0.1);
+                    obj.scale.y=0.1;
                     scene.add(model.scene.children[0]);
 				} );
             }
@@ -3023,9 +2745,6 @@
 					} )
 					return texture;
             }
-            
-            var renderTargetParameters;
-            var renderTargetOcl;
 
             //funzione che inizializza la scena
 			function init() {
@@ -3049,12 +2768,10 @@
 				window.addEventListener( 'resize', onResize, false );
 
                 
-                    composer = new THREE.EffectComposer( renderer);
-                    composer.addPass( new THREE.RenderPass( scene, camera ) );
+                composer = new THREE.EffectComposer( renderer);
+                composer.addPass( new THREE.RenderPass( scene, camera ) );
 
 			}
-
-            var pass4;
 
             //funzioni che gestiscono il funzionamento generale
 			function onResize() {
@@ -3104,10 +2821,7 @@
 			}
 
 			function render() {
-
-                //composer.render(new THREE.Clock().getDelta());
                 composer.render();
-
 			}
 
 			init();
