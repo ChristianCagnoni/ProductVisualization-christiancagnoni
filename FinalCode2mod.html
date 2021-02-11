@@ -1999,6 +1999,7 @@
                     "vec2 uvRandom = vUv;",//copia vUv
                     "uvRandom.y *= random(vec2(uvRandom.y,amount));",//randomizza la componente y di uvRandom con un valore pari ad amount
                     "color.rgb += random(uvRandom)*0.15;",//randomizza ulteriormente uvRandom moltiplicalo per 0.15 e somma questo valore alle componenti rgb di color
+                    //moltiplicazione per controllare la granulosità
                     "gl_FragColor = vec4( color );",
             "}"
             ].join("\n")
