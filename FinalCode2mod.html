@@ -228,6 +228,9 @@
                 }else{
                     composer = new THREE.EffectComposer( renderer );
 			        composer.addPass( new THREE.RenderPass( scene, camera ) );
+
+                    composer.addPass(fxaa);
+                    fxaa.renderToScreen=true;
                 }
             }
 
@@ -591,7 +594,6 @@
                 var price=document.getElementById("price");
                 var film=document.getElementById("film");
                 var pass;
-                var pass2
                 var aces=document.getElementById("aces");
                 if(aces.checked==true){
                     composer.removePass(aces_TM);
@@ -623,14 +625,17 @@
                     
                     volumetericLightShaderUniforms = pass.uniforms;
 
-                    pass2=new THREE.ShaderPass( fxaa );
-                    composer.addPass(pass2);
-                    pass2.renderToScreen=true;
+                    composer.removePass(fxaa);
+
+                    composer.addPass(fxaa);
+                    fxaa.renderToScreen=true;
 
                 }else{
-                    occlusionRenderTarget = new THREE.WebGLRenderTarget( window.innerWidth * 0.5, window.innerHeight * 0.5 );
-                    composer = new THREE.EffectComposer( renderer, occlusionRenderTarget);
+                    composer = new THREE.EffectComposer( renderer);
                     composer.addPass( new THREE.RenderPass( scene, camera ) );
+
+                    composer.addPass(fxaa);
+                    fxaa.renderToScreen=true;
                 }
             }
 
@@ -731,6 +736,10 @@
                 }else{
                     composer = new THREE.EffectComposer( renderer );
 			        composer.addPass( new THREE.RenderPass( scene, camera ) );
+
+                    composer.addPass(fxaa);
+                    fxaa.renderToScreen=true;
+
                     emMesh.material.transparent=false;
                     emMesh.material.depthWrite=true;
                     emMesh1.material.transparent=false;
@@ -780,6 +789,9 @@
                 }else{
                     composer = new THREE.EffectComposer( renderer );
 			        composer.addPass( new THREE.RenderPass( scene, camera ) );
+
+                    composer.addPass(fxaa);
+                    fxaa.renderToScreen=true;
                 }
                 
             }
@@ -1780,7 +1792,7 @@
 
 			uniforms: {
 				"tDiffuse": { type: "t", value: null },//texture della precedente passata
-                "v":        { type: "f", value: 1.0 / 1080.0 }//reciproco della risoluzione settata a 1080
+                "v":        { type: "f", value: 1.0 / window.innerHeight }//reciproco della risoluzione verticale
             },
 
 			vertexShader: [//definisci gl_Position e passa al fragment uv
@@ -1873,6 +1885,9 @@
 
                 //https://en.wikipedia.org/wiki/Fast_approximate_anti-aliasing
                 //https://reshade.me/forum/shader-discussion/1641-fxaa-parameter-confusion
+                //https://studylib.net/doc/5611053/fxaa-3.11-in-15-slides
+                //https://catlikecoding.com/unity/tutorials/advanced-rendering/fxaa/
+
 
                 "vec4 fxaa(sampler2D tex, vec2 fragCoord, vec2 resolution,vec2 v_rgbNW, vec2 v_rgbNE,vec2 v_rgbSW, vec2 v_rgbSE,vec2 v_rgbM) {",
                     "vec4 color;",
@@ -1899,7 +1914,7 @@
                     "float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) *(0.25 * FXAA_REDUCE_MUL), FXAA_REDUCE_MIN);",//fattore di riduzione distanza media 4 luminanze
                     
                     "float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);",//reciproco minima luminanza con riduzione applicata
-                    "dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX),max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX),dir * rcpDirMin)) * inverseVP;",//aggiusta fattore di distanza luminanza
+                    "dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX),max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX),dir * rcpDirMin)) * inverseVP;",//aggiusta fattore di distanza luminanza(inverseVP per applicare effetto al solo oggetto)
                     "vec3 rgbA = 0.5 * (texture2D(tex, fragCoord * inverseVP + dir * (1.0 / 3.0 - 0.5)).xyz +texture2D(tex, fragCoord * inverseVP + dir * (2.0 / 3.0 + 0.5)).xyz);",//colore centrale(Controls removal of sub-pixel aliasing)
                     "vec3 rgbB = rgbA *0.5+ 0.25 * (texture2D(tex, fragCoord * inverseVP + dir * (0.0/3.0 -0.5)).xyz +texture2D(tex, fragCoord * inverseVP + dir * (3.0/3.0 - 0.5)).xyz);",//colore bordi
 
@@ -1926,7 +1941,7 @@
 
                 uniforms: {
                     "tDiffuse": { type: "t", value: null },//texture della precedente passata
-                    "h":        { type: "f", value: 1.0 / 1920.0 }//reciproco della risoluzione settata a 1920
+                    "h":        { type: "f", value: 1.0 / window.innerWidth }//reciproco della risoluzione orizzontale
                 },
 
                 vertexShader: [//definisci gl_Position e passa al fragment uv
@@ -2121,8 +2136,6 @@
             var emMesh2;
             var emMesh3;
             var emMesh4;
-            var occlusionComposer;
-            var occlusionRenderTarget;
             var clock=new THREE.Clock();
             var filmpass;
             var copyMesh;
@@ -2131,6 +2144,7 @@
             var copyMesh3;
             var copyMesh4;
             var aces_TM;
+            var fxaa;
 
 			var normalMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
             var normalMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
@@ -2774,6 +2788,10 @@
                 
                 composer = new THREE.EffectComposer( renderer);
                 composer.addPass( new THREE.RenderPass( scene, camera ) );
+
+                fxaa=new THREE.ShaderPass( fxaa );
+                composer.addPass(fxaa);
+                fxaa.renderToScreen=true;
 
 			}
 
