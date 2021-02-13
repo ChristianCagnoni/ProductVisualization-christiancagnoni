@@ -2818,6 +2818,9 @@
                 }
                 if(film.checked==true){
                     filmpass.uniforms.amount.value+=0.1;
+                    if(filmpass.uniforms.amount.value>5000000){
+                        filmpass.uniforms.amount.value=5.0;
+                    }
                 }
                 if(copyMesh!=undefined){
                     copyMesh.material.uniforms.viewVector.value = 
