@@ -1810,6 +1810,8 @@
 				"{",
                    "vec4 sum = vec4( 0.0 );",//inizializza sum a 0
 
+                    //https://en.wikipedia.org/wiki/Kernel_(image_processing)#Convolution
+
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 4.0 * v ) ) * 0.051;",
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 3.0 * v ) ) * 0.0918;",
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 2.0 * v ) ) * 0.12245;",
@@ -2053,7 +2055,7 @@
                     "{",
                         "vec3 a = v*(         v + 0.0245786) - 0.000090537;",
                         "vec3 b = v*(0.983729*v + 0.4329510) + 0.238081;",
-                        "return a/b;//(v*(2.51*v+0.03))/(v*(2.43*v+0.59)+0.14);",
+                        "return a/b;//v=v*0.6;(v*(2.51*v+0.03))/(v*(2.43*v+0.59)+0.14);",//0.6 per apparire uguale a a/b
                     "}",
 
                    " mat3 mat3_from_rows(vec3 c0, vec3 c1, vec3 c2)",
@@ -2106,6 +2108,8 @@
 
                         // Clamp to [0, 1]
                         "color = saturate(color);",
+
+                        "color=pow( color, vec3(0.45));",//codifica gamma per ottenere il risultato corretto
 
                         "return color;",
                     "}",
