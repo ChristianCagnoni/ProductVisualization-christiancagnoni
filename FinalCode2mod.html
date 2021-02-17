@@ -1811,6 +1811,7 @@
                    "vec4 sum = vec4( 0.0 );",//inizializza sum a 0
 
                     //https://en.wikipedia.org/wiki/Kernel_(image_processing)#Convolution
+                    //effetto simile con [0.0625, 0.125, 0.0625, 0.125, 0.25, 0.125, 0.0625, 0.125, 0.0625]
 
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 4.0 * v ) ) * 0.051;",
                     "sum += texture2D( tDiffuse, vec2( vUv.x, vUv.y - 3.0 * v ) ) * 0.0918;",
@@ -2109,15 +2110,13 @@
                         // Clamp to [0, 1]
                         "color = saturate(color);",
 
-                        "color=pow( color, vec3(0.45));",//codifica gamma per ottenere il risultato corretto
-
                         "return color;",
                     "}",
 
                     "void main()",
                     "{",
                         "vec4 color = texture2D( tDiffuse, vUv );",//colore ottenuto dalla texture della passata precedente
-                        "gl_FragColor = vec4( aces_fitted(color.rgb),color.a );",
+                        "gl_FragColor = vec4( pow( aces_fitted(color.rgb),vec3(1.0/2.2)),color.a );",
             "}"
             ].join("\n")
 
