@@ -608,10 +608,7 @@
                     changeFilm();
                     
                     const screenPosition=new THREE.Vector2();
-                    screenPosition.set(
-                        Math.min(Math.max((0.0 + 1.0) * 0.5, -1.0), 2.0),
-                        Math.min(Math.max((0.0 + 1.0) * 0.5, -1.0), 2.0)
-                        );
+                    screenPosition.set(0.5,0.5);
 
                     pass = new THREE.ShaderPass( THREE.VolumetericLightShader );
                     pass.needsSwap = true;
@@ -2099,6 +2096,8 @@
                             "vec3( 1.60475,-0.53108,-0.07367),",
                             "vec3(-0.10208, 1.10813,-0.00605),",
                             "vec3(-0.00327,-0.07276, 1.07602));",
+
+                        "color*=0.5/0.6;",
 
                         "color = mul(ACES_INPUT_MAT, color);",
 
