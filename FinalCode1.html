@@ -1,0 +1,1981 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+        <meta charset=UTF-8 />
+        <link rel="stylesheet" type="text/css" href="styles.css" />
+      </head>
+	<body>
+		<script src="libs/three.js"></script>
+		<script src="libs/stats.min.js"></script>
+		<script src="libs/OrbitControls.js"></script>
+		<script src='libs/dat.gui.min.js'></script>
+		<script src='libs/GLTFLoader.js'></script>
+        <script src='libs/BufferGeometryUtils.js'></script>
+        <script src='libs/Object3d.js'></script>
+        <script src='libs/postprocessing.min.js'></script>
+
+		<!-- shaders -->
+
+		<script type="text/x-glsl" id="vertex">
+		attribute vec4 tangent;
+		varying vec3 vNormal;
+        varying vec3 vPosition;
+        varying vec3 wPosition;
+		varying vec2 vUv;
+		varying vec3 vTangent;
+		varying vec3 vBitangent;
+
+		void main() {
+			vec4 vPos = modelViewMatrix * vec4( position, 1.0 );
+            vPosition = vPos.xyz;
+            wPosition = (modelMatrix * vec4( position, 1.0 )).xyz;
+			vNormal = normalize(normalMatrix * normal);
+			vec3 objectTangent = vec3( tangent.xyz );
+			vec3 transformedTangent = normalMatrix * objectTangent;
+			vTangent = normalize( transformedTangent );
+			vBitangent = normalize( cross( vNormal, vTangent ) * tangent.w );
+			vUv = uv;
+			gl_Position = projectionMatrix * vPos;
+		}
+		</script>
+
+		<script type="text/x-glsl" id="fragment">
+			varying vec3 vNormal;
+			varying vec3 vTangent;
+			varying vec3 vBitangent;
+            varying vec3 vPosition;
+            varying vec3 wPosition;
+			varying vec2 vUv;
+			uniform vec3 clight;
+			uniform vec3 ambientLight;
+            uniform sampler2D normalMap;
+            uniform sampler2D roughnessMap;
+            uniform sampler2D specularMap;
+            uniform sampler2D metalnessMap;
+            uniform sampler2D diffuseMap;
+            uniform sampler2D AOMap;
+            uniform sampler2D glowMap;
+            uniform samplerCube envMap;
+            uniform vec2 textureRepeat;
+            uniform vec2 normalScale;
+            uniform vec3 pointLightPosition;
+            uniform float intensity;
+            uniform float em;
+            const float PI = 3.14159;
+            uniform vec3 emissiveC;
+            uniform float glass;
+            uniform float n1;
+			uniform float n2;
+            
+			
+			#define saturate(a) clamp( a, 0.0, 1.0 )
+
+            vec3 metalness;
+            vec3 cdiff;
+            vec3 cspec;
+			float roughness;
+			
+			vec3 getCSpec(vec3 albedo, vec3 metal){  
+				float r = max(metal.r, 0.2196) * albedo.r; //0.2196 e' #383838
+				float g = max(metal.g, 0.2196) * albedo.g;
+				float b = max(metal.b, 0.2196) * albedo.b;
+				return vec3(r,g,b);
+			}
+
+			float pow2( const in float x ) { return x*x; }
+
+			float getSpecularMIPLevel( const in float blinnShininessExponent, const in int maxMIPLevel ) {
+				float maxMIPLevelScalar = float( maxMIPLevel );
+				float desiredMIPLevel = maxMIPLevelScalar - 0.79248 - 0.5 * log2( pow2( blinnShininessExponent ) + 1.0 );
+				return clamp( desiredMIPLevel, 0.0, maxMIPLevelScalar );
+			}
+
+			float GGXRoughnessToBlinnExponent( const in float ggxRoughness ) {
+				return ( 2.0 / pow2( ggxRoughness + 0.0001 ) - 2.0 );
+			}
+
+			vec3 FSchlick(float vDoth, vec3 f0) {
+				return f0 + (vec3(1.0)-f0)*pow(1.0 - vDoth,5.0);
+			}
+
+			float DGGX(float NoH, float alpha) {
+				float alpha2 = alpha * alpha;
+				float k = NoH*NoH * (alpha2 - 1.0) + 1.0;
+    			return alpha2 / (PI * k * k );
+			}
+
+			float G1(float nDotv, float alpha) {
+				float alpha2 = alpha*alpha;
+				return 2.0 * (nDotv / (nDotv + sqrt(alpha2 + (1.0-alpha2)*nDotv*nDotv )));
+			}
+
+			float GSmith(float nDotv, float nDotl, float alpha) {
+				return G1(nDotl,alpha)*G1(nDotv,alpha);
+            }
+            
+            vec3 inverseTransformDirection( in vec3 dir, in mat4 matrix ) {
+                return normalize( ( vec4( dir, 0.0 ) * matrix ).xyz );
+			}
+			
+			vec3 BRDF_Specular_GGX_Environment( vec3 normal, vec3 viewDir, const in vec3 cspec, const in float roughness ) {
+
+				float dotNV = saturate( dot( normal, viewDir ) );
+				const vec4 c0 = vec4( - 1, - 0.0275, - 0.572, 0.022 );
+				const vec4 c1 = vec4( 1, 0.0425, 1.04, - 0.04 );
+				vec4 r = roughness * c0 + c1;
+				float a004 = min( r.x * r.x, exp2( - 9.28 * dotNV ) ) * r.x + r.y;
+				vec2 AB = vec2( -1.04, 1.04 ) * a004 + r.zw;
+				return cspec * AB.x + AB.y;
+
+			}
+
+			void main() {
+				vec4 lPosition = viewMatrix * vec4( pointLightPosition, 1.0 );
+				vec3 l = normalize(lPosition.xyz - vPosition.xyz);
+				vec3 normal = normalize( vNormal );
+				vec3 tangent = normalize( vTangent );
+				vec3 bitangent = normalize( vBitangent );
+				mat3 vTBN = mat3( tangent, bitangent, normal );
+				vec3 mapN = texture2D( normalMap, vUv ).xyz * 2.0 - 1.0;
+				vec3 n = normalize( vTBN * mapN );
+				vec3 v = normalize( -vPosition);
+				vec3 h = normalize( v + l);
+				float nDotl = max(dot( n, l ),0.000001);
+				float lDoth = max(dot( l, h ),0.000001);
+				float nDoth = max(dot( n, h ),0.000001);
+				float vDoth = max(dot( v, h ),0.000001);
+                float nDotv = max(dot( n, v ),0.000001);
+                vec3 worldN = inverseTransformDirection( n, viewMatrix );
+				vec3 worldV = cameraPosition - wPosition ;
+                vec3 r = normalize( reflect(-worldV,worldN));
+                vec3 fresnel = FSchlick(vDoth, cspec);
+                metalness = texture2D( metalnessMap, vUv*textureRepeat).rgb;
+				metalness = pow( metalness, vec3(2.2));
+                cdiff = texture2D( diffuseMap, vUv*textureRepeat ).rgb;
+				cdiff = pow( cdiff, vec3(2.2));
+				cspec = getCSpec(cdiff, metalness);
+				cdiff = cdiff*(vec3(1)-metalness);
+                roughness = texture2D( roughnessMap, vUv*textureRepeat).r;
+                vec3 outRadiance;
+                if(em>0.0){
+                    vec4 glow=texture2D(glowMap,vUv*textureRepeat)*30.0*2.0;
+                    glow.rgb*=emissiveC;
+                    vec3 luma = vec3( 0.299, 0.587, 0.114 );
+                    float lg = dot( glow.xyz, luma );//calcolo luminanza Digital ITU BT.601 https://stackoverflow.com/questions/596216/formula-to-determine-brightness-of-rgb-color
+                    vec4 outputColor = vec4( (texture2D(glowMap,vUv*textureRepeat)).rgb, 0.0 );
+                    float alphagl = smoothstep( 1.0, 1.0 + 1.0, lg );//https://en.wikipedia.org/wiki/Smoothstep
+                    vec4 risult_int=mix( outputColor, glow, alphagl );
+                    outRadiance=risult_int.xyz;
+                }
+				float alpha = roughness * roughness;
+				float blinnShininessExponent = GGXRoughnessToBlinnExponent(roughness);
+				float specularMIPLevel = getSpecularMIPLevel(blinnShininessExponent, 8 );
+                vec3 envLight = textureCube( envMap, vec3(-r.x, r.yz),specularMIPLevel).rgb;
+                envLight = pow( envLight, vec3(2.2));
+                if(glass>0.0){
+                    mapN.xy = normalScale * mapN.xy;
+                    vec3 rRifr = normalize( refract(-worldV,worldN,n1/n2));//3.0/3.0
+                    vec3 envLightRifr=textureCube( envMap, vec3(-rRifr.x, rRifr.yz)).rgb;
+                    envLightRifr = pow( envLightRifr, vec3(2.2));
+                    outRadiance=(vec3(1.0)-fresnel)*envLightRifr+fresnel*envLight;
+                }else{
+                outRadiance+=envLight*BRDF_Specular_GGX_Environment(n, v, cspec, roughness);
+                outRadiance = outRadiance + envLight*(cdiff*texture2D( AOMap, vUv ).xyz).xyz * 0.2;
+                //vec3 clight = vec3(0.95);
+                vec3 BRDF = (vec3(1.0)-fresnel)*cdiff/PI + fresnel*GSmith(nDotv,nDotl, alpha)*DGGX(nDoth,alpha)/
+                    (4.0*nDotl*nDotv);
+                outRadiance = outRadiance + PI* clight * nDotl * BRDF;//*5.0
+                }
+				gl_FragColor = vec4(pow( outRadiance * intensity, vec3(1.0/2.2)), 1.0);
+			}
+        </script>
+
+		<!-- three.js code -->
+
+		<script>
+
+            //variabili per la gestione delle texture, dell'oggetto 3d, dei parametri d'interazione con l'utente
+			var renderer = new THREE.WebGLRenderer( { antialias: true } );
+			var camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 1, 50000 );
+			var controls = new THREE.OrbitControls( camera, renderer.domElement );
+			var scene = new THREE.Scene();
+            var obj=new THREE.Object3D();
+            var hemL;
+            var dirL;
+            var config=0;
+            scene.add(obj);  
+            var composer;
+            var ok=0;
+            var emMesh;
+            var emMesh1;
+            var emMesh2;
+            var emMesh3;
+            var emMesh4;
+
+            composer = new POSTPROCESSING.EffectComposer(renderer);
+            let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+            renderPass.renderToScreen = true;
+            composer.addPass(renderPass);
+
+			var normalMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+            var normalMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+            var normalMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+            var normalMap4 = loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+            var normalMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg" );
+            
+            var roughness1 = loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+            var roughness2 = loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+            var roughness3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+            var roughness4 = loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+            var roughness5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+            
+
+            var specularMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+            var specularMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+            var specularMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+            var specularMap4 = loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+            var specularMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+
+            var diffuseMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+            var diffuseMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+            var diffuseMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+            var diffuseMap4 = loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+            var diffuseMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+
+            var metalnessMap1 = loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+            var metalnessMap2 = loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+			var metalnessMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+            var metalnessMap4 = loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+			var metalnessMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+
+            var aoMap1 = loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+            var aoMap2 = loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+			var aoMap3 = loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+            var aoMap4 = loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+			var aoMap5 = loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+            
+            var glowMap = loadTexture( "textures/glow3.png" );
+            
+            var loader = new THREE.CubeTextureLoader();
+				loader.setPath( 'envMap/night meadow/' );
+
+				var textureCube = loader.load( [
+					'px.png', 'nx.png',
+					'py.png', 'ny.png',
+					'pz.png', 'nz.png'
+				] );
+				textureCube.minFilter = THREE.LinearMipMapLinearFilter;
+
+			scene.background = textureCube;
+
+            var oggetto = {
+				model: 'Axe'
+			}
+
+            var raygodsS={
+                ray:false,
+                effects:0
+            }
+
+            var material = {
+				texture1: 'MetalAxe',
+                texture2: 'GoldAxe',
+                texture3: 'WoodAxe',
+                texture4: '',
+                texture5: '',
+            }
+            
+            var rotation={
+                rotationX:0,
+                rotationY:0,
+                rotationZ:0
+            }
+
+            var scale={
+                scaleX:1,
+                scaleY:1,
+                scaleZ:1
+            }
+
+            var emissive={
+                red:1.0,
+                green:1.0,
+                blue:1.0
+            }
+
+            var textureParameters={
+                normalScale: 0.0,
+                nu:1.0,
+                nd:1.0
+            }
+
+            var traslate={
+                translateX:0,
+                translateY:0,
+                translateZ:0
+            }
+
+            var lightSettings={
+                x:0,
+                y:15,
+                z:0,
+                R:0.95,
+                G:0.95,
+                B:0.95,
+                intensity:5.0
+            }
+
+            var backgroundMap={
+                map:'Night Meadow'
+            }
+
+            var glass={
+                uno:0,
+                due:0,
+                tre:0,
+                quattro:1,
+                cinque:0
+            }
+
+            var em={
+                uno:0,
+                due:0,
+                tre:0,
+                quattro:0,
+                cinque:1
+            }
+
+            var objects=[];
+
+			var uniforms1 = {
+                    specularMap: { type: "t", value: specularMap1},
+                    diffuseMap:	{ type: "t", value: diffuseMap1},
+                    metalnessMap:	{ type: "t", value: metalnessMap1},
+				    roughnessMap: { type: "t", value: roughness1},
+					normalMap:	{ type: "t", value: normalMap1},
+                    AOMap: {type: "t", value: aoMap1},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.uno},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.uno}
+                    };
+            var uniforms2 = {
+                    specularMap: { type: "t", value: specularMap2},
+                    diffuseMap:	{ type: "t", value: diffuseMap2},
+                    metalnessMap:	{ type: "t", value: metalnessMap2},
+				    roughnessMap: { type: "t", value: roughness2},
+					normalMap:	{ type: "t", value: normalMap2},
+                    AOMap: {type: "t", value: aoMap2},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.due},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.due}
+                    };
+            var uniforms3 = {
+                    specularMap: { type: "t", value: specularMap3},
+					diffuseMap:	{ type: "t", value: diffuseMap3},
+					metalnessMap:	{ type: "t", value: metalnessMap3},
+				    roughnessMap: { type: "t", value: roughness3},
+					normalMap:	{ type: "t", value: normalMap3},
+                    AOMap: {type: "t", value: aoMap3},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.tre},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.tre}
+					};
+            var uniforms4 = {
+                    specularMap: { type: "t", value: specularMap4},
+					diffuseMap:	{ type: "t", value: diffuseMap4},
+					metalnessMap:	{ type: "t", value: metalnessMap4},
+				    roughnessMap: { type: "t", value: roughness4},
+					normalMap:	{ type: "t", value: normalMap4},
+                    AOMap: {type: "t", value: aoMap4},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.quattro},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.quattro}
+					};
+            var uniforms5 = {
+                    specularMap: { type: "t", value: specularMap5},
+					diffuseMap:	{ type: "t", value: diffuseMap5},
+					metalnessMap:	{ type: "t", value: metalnessMap5},
+				    roughnessMap: { type: "t", value: roughness5},
+					normalMap:	{ type: "t", value: normalMap5},
+                    AOMap: {type: "t", value: aoMap5},
+					normalScale: {type: "v2", value: new THREE.Vector2(1,1)},
+                    n1:{type:"f",value:textureParameters.nu},
+					n2:{type:"f",value:textureParameters.nd},
+					pointLightPosition:	{ type: "v3", value: new THREE.Vector3(lightSettings.x,lightSettings.y,lightSettings.z) },
+					clight:	{ type: "v3", value: new THREE.Vector3(lightSettings.R,lightSettings.G,lightSettings.B) },
+                    intensity: {type: "f", value: lightSettings.intensity},
+                    ambientLight:	{ type: "v3", value: new THREE.Vector3() },
+                    textureRepeat: { type: "v2", value: new THREE.Vector2(1,1)},
+                    envMap:	{ type: "t", value: textureCube},
+                    em : {type: "f",value: em.cinque},
+                    glowMap:{type:"t",value:glowMap},
+                    emissiveC:{type:'v3',value: new THREE.Vector3(emissive.red,emissive.green,emissive.blue)},
+                    glass : {type: "f",value: glass.cinque}
+					};
+
+			vs = document.getElementById("vertex").textContent;
+			fs = document.getElementById("fragment").textContent;
+
+			var ourMaterial = [new THREE.ShaderMaterial({ uniforms: uniforms1, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms2, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms3, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms4, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide }),
+                                new THREE.ShaderMaterial({ uniforms: uniforms5, vertexShader: vs, fragmentShader: fs, side: THREE.DoubleSide })];
+			ourMaterial.vertexTangents = true;
+			ourMaterial.needsUpdate = true;
+			
+            //caricamento di default del primo modello (ascia)
+			var loader = new THREE.GLTFLoader();
+			loader.useIndices = true;
+			loader.load( "models/axes5.glb", function ( model ) {
+					console.log(model);
+					geometry= model.scene.children[0].children[0].geometry;
+					geometry.center();
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
+					emMesh.position.x=0;
+					emMesh.position.y=0;
+					emMesh.position.z=0.92;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
+
+					geometry= model.scene.children[0].children[1].geometry;
+					geometry.center();
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+					emMesh1.position.x=0;
+					emMesh1.position.y=-0.015;
+					emMesh1.position.z=0.3925;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
+                    
+                    geometry= model.scene.children[0].children[2].geometry;
+					geometry.center();
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+					emMesh2.position.x=0;
+					emMesh2.position.y=0;
+					emMesh2.position.z=2;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
+				} );
+
+            //definizione delle funzioni che caricano i 3 modelli 3d
+            function loadAxes(){
+                var loader = new THREE.GLTFLoader();
+			    loader.useIndices = true;
+				loader.load( "models/axes5.glb", function ( model ) {
+					console.log(model);
+					geometry= model.scene.children[0].children[0].geometry;
+					geometry.center();
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
+					emMesh.position.x=0;
+					emMesh.position.y=0;
+					emMesh.position.z=0.92;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
+
+					geometry= model.scene.children[0].children[1].geometry;
+					geometry.center();
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+					emMesh1.position.x=0;
+					emMesh1.position.y=-0.015;
+					emMesh1.position.z=0.3925;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
+                    
+                    geometry= model.scene.children[0].children[2].geometry;
+					geometry.center();
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+					emMesh2.position.x=0;
+					emMesh2.position.y=0;
+					emMesh2.position.z=2;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
+				} );
+                if(config==1){
+                    buildGui();
+                }
+            }
+
+            function loadSickle(){
+
+                var loader = new THREE.GLTFLoader();
+			    loader.useIndices = true;
+				loader.load( "models/falce.glb", function ( model ) {
+					console.log(model);
+					geometry= model.scene.children[0].children[0].geometry;
+					geometry.center();
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
+					emMesh.position.x=0;
+					emMesh.position.y=0;
+					emMesh.position.z=0;
+                    emMesh.scale.y+=2.5;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
+
+					geometry= model.scene.children[0].children[1].geometry;
+					geometry.center();
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+					emMesh1.position.x=0;
+					emMesh1.position.y=0;
+					emMesh1.position.z=0;
+                    emMesh1.scale.y+=2.5;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
+                    
+                    geometry= model.scene.children[0].children[2].geometry;
+					geometry.center();
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+					emMesh2.position.x=0;
+					emMesh2.position.y=0;
+					emMesh2.position.z=0;
+                    emMesh2.scale.y+=2.5;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
+
+                    geometry= model.scene.children[0].children[3].geometry;
+					geometry.center();
+					emMesh3 = new THREE.Mesh(geometry,ourMaterial[3]);
+                    emMesh3.scale.multiplyScalar( 0.1 );
+					emMesh3.position.x=0;
+					emMesh3.position.y=0;
+					emMesh3.position.z=0;
+                    emMesh3.scale.y+=2.475;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh3);
+					scene.add( emMesh3 );
+                    obj.add(emMesh3);
+
+                    geometry= model.scene.children[0].children[4].geometry;
+					geometry.center();
+					emMesh4 = new THREE.Mesh(geometry,ourMaterial[4]);
+                    emMesh4.scale.multiplyScalar( 0.1 );
+					emMesh4.position.x=0.05;
+					emMesh4.position.y=2.175;
+					emMesh4.position.z=-0.9;
+                    emMesh4.scale.y+=2.5;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh4);
+					scene.add( emMesh4 );
+                    obj.add(emMesh4);
+				} );
+                if(config==1){
+                    buildGui();
+                }
+            }
+
+            function loadShield(){
+                var loader = new THREE.GLTFLoader();
+			    loader.useIndices = true;
+				loader.load( "models/shield3.glb", function ( model ) {
+					console.log(model);
+					geometry= model.scene.children[0].children[0].geometry;
+					geometry.center();
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
+
+					geometry= model.scene.children[0].children[1].geometry;
+					geometry.center();
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+					emMesh1.scale.multiplyScalar( 0.1 );
+                    emMesh1.position.x+=0.23;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
+                    
+                    geometry= model.scene.children[0].children[2].geometry;
+					geometry.center();
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+                    emMesh2.position.x+=0.128;
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
+				} );
+                if(config==1){
+                    buildGui();
+                }
+            }
+
+            function loadSword(){
+                var loader = new THREE.GLTFLoader();
+			    loader.useIndices = true;
+				loader.load( "models/sword.glb", function ( model ) {
+					console.log(model);
+					geometry= model.scene.children[0].children[0].geometry;
+					geometry.center();
+					emMesh = new THREE.Mesh(geometry,ourMaterial[0]);
+					emMesh.scale.multiplyScalar( 0.1 );
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    emMesh.rotation.y+=90*Math.PI/180;
+                    objects.push(emMesh);
+					scene.add( emMesh );
+                    obj.add(emMesh);
+
+					geometry= model.scene.children[0].children[1].geometry;
+					geometry.center();
+					emMesh1 = new THREE.Mesh(geometry,ourMaterial[1]);
+                    emMesh1.scale.multiplyScalar( 0.1 );
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    emMesh1.position.y-=1.0455;
+                    emMesh1.rotation.y+=90*Math.PI/180;
+                    objects.push(emMesh1);
+                    scene.add( emMesh1 );
+                    obj.add(emMesh1);
+                    
+                    geometry= model.scene.children[0].children[2].geometry;
+					geometry.center();
+					emMesh2 = new THREE.Mesh(geometry,ourMaterial[2]);
+                    emMesh2.scale.multiplyScalar( 0.1 );
+					THREE.BufferGeometryUtils.computeTangents(geometry);
+                    emMesh2.position.y-=1.09;
+                    emMesh2.rotation.y+=90*Math.PI/180;
+                    objects.push(emMesh2);
+					scene.add( emMesh2 );
+                    obj.add(emMesh2);
+				} );
+                if(config==1){
+                    buildGui();
+                }
+            }
+
+            function loadSmallSword(){
+                var loader = new THREE.GLTFLoader();
+			    loader.useIndices = true;
+				loader.load( "models/smallsword.glb", function ( model ) {
+					console.log(model);
+                    const tmp=model.scene.children[0];
+                    for(var i=0;i<tmp.children.length;i++){
+                        tmp.children[i].material.metalness=tmp.children[i].material.metalness/2;
+                    }
+                    tmp.scale.multiplyScalar(0.5);
+                    scene.add(tmp);
+                    obj.add(tmp);
+				} );
+                buildGuiSw()
+                hemL = new THREE.HemisphereLight( 0xffffff, 0x444444 );
+                hemL.position.set( 0, 300, 0 );
+                scene.add( hemL );
+
+                dirL = new THREE.DirectionalLight( 0xffffff );
+                dirL.position.set( 75, 300, -75 );
+                scene.add( dirL );
+            }
+
+            //definizione delle funzioni che caricano le diverse environment map
+            function loadEnvMapNM(){
+                var loader = new THREE.CubeTextureLoader();
+				loader.setPath( 'envMap/night meadow/' );
+
+				textureCube = loader.load( [
+					'px.png', 'nx.png',
+					'py.png', 'ny.png',
+					'pz.png', 'nz.png'
+				] );
+				textureCube.minFilter = THREE.LinearMipMapLinearFilter;
+
+			    scene.background = textureCube;
+            }
+
+            function loadEnvMapCG(){
+                var loader = new THREE.CubeTextureLoader();
+				loader.setPath( 'envMap/chinese garden/' );
+
+				textureCube = loader.load( [
+					'px.png', 'nx.png',
+					'py.png', 'ny.png',
+					'pz.png', 'nz.png'
+				] );
+				textureCube.minFilter = THREE.LinearMipMapLinearFilter;
+
+			    scene.background = textureCube;
+            }
+
+            function loadEnvMapE(){
+                var loader = new THREE.CubeTextureLoader();
+				loader.setPath( 'envMap/external/' );
+
+				textureCube = loader.load( [
+					'px.png', 'nx.png',
+					'py.png', 'ny.png',
+					'pz.png', 'nz.png'
+				] );
+				textureCube.minFilter = THREE.LinearMipMapLinearFilter;
+
+			    scene.background = textureCube;
+            }
+
+            function loadEnvMapI(){
+                var loader = new THREE.CubeTextureLoader();
+				loader.setPath( 'envMap/internal/' );
+
+				textureCube = loader.load( [
+					'px.png', 'nx.png',
+					'py.png', 'ny.png',
+					'pz.png', 'nz.png'
+				] );
+				textureCube.minFilter = THREE.LinearMipMapLinearFilter;
+
+			    scene.background = textureCube;
+            }
+
+            function loadEnvMapNP(){
+                var loader = new THREE.CubeTextureLoader();
+				loader.setPath( 'envMap/night park/' );
+
+				textureCube = loader.load( [
+					'px.png', 'nx.png',
+					'py.png', 'ny.png',
+					'pz.png', 'nz.png'
+				] );
+				textureCube.minFilter = THREE.LinearMipMapLinearFilter;
+
+			    scene.background = textureCube;
+            }
+
+            function loadEnvMapS(){
+                var loader = new THREE.CubeTextureLoader();
+				loader.setPath( 'envMap/studio/' );
+
+				textureCube = loader.load( [
+					'px.png', 'nx.png',
+					'py.png', 'ny.png',
+					'pz.png', 'nz.png'
+				] );
+				textureCube.minFilter = THREE.LinearMipMapLinearFilter;
+
+			    scene.background = textureCube;
+            }
+
+			var gui;
+			var stats = new Stats();
+
+			function loadTexture(file) {
+					var texture = new THREE.TextureLoader().load( file , function ( texture ) {
+
+						texture.minFilter = THREE.LinearMipMapLinearFilter;
+						texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+						texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    			  		texture.offset.set( 0, 0 );
+						texture.needsUpdate = true;
+						render();
+					} )
+					return texture;
+			}
+
+            //funzione che inizializza la scena
+			function init() {
+
+				renderer.autoClearColor=false;
+                renderer.autoClearDepth= true;
+                renderer.autoClearStencil= true;
+
+				camera.position.set( 0, 0, 10 );
+				scene.add( camera );
+
+				document.body.appendChild( renderer.domElement );
+				renderer.setPixelRatio( window.devicePixelRatio );
+				renderer.setSize( window.innerWidth, window.innerHeight );
+
+				controls.minDistance = 1;
+				controls.maxDistance = 100;
+				controls.enablePan = false;
+				controls.update();
+
+				window.addEventListener( 'resize', onResize, false );
+
+			    stats.domElement.style.position = 'absolute';
+			    stats.domElement.style.top = '0px';
+			    document.body.appendChild( stats.domElement );
+
+                ourMaterial.needsUpdate = true;
+
+			}
+
+            //funzioni che gestiscono il funzionamento generale
+			function onResize() {
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				camera.aspect = ( window.innerWidth / window.innerHeight );
+				camera.updateProjectionMatrix();
+
+			}
+
+			function update() {
+				requestAnimationFrame( update );
+				stats.update();
+				render();
+			}
+
+			function render() {
+                //renderer.render( scene, camera );
+
+                /*if(ok==1 && raygodsS.ray){
+                    renderer.clear();
+                    composer.render(0.1);
+                    stats.update();
+                }else if(!raygodsS.ray){
+                    renderer.clearDepth();
+                    renderer.render( scene, camera );
+                }*/
+
+                composer.render(new THREE.Clock().getDelta());
+
+			}
+
+			function clearGui() {
+
+				if ( gui ) gui.destroy();
+				gui = new dat.GUI();
+				gui.open();
+
+			}
+
+            function buildGuiSw() {
+
+				clearGui();
+                modelSelection = gui.addFolder('Model Selection');
+                modelSelection.add(oggetto,'model',['Axe','Shield','Sword','Small Sword','Sickel']).onChange(function(newVal){
+                    if(newVal=='Axe'){
+                        scene.remove(obj);
+                        obj=new THREE.Object3D();
+                        scene.add(obj);
+                        scene.remove(dirL);
+                        scene.remove(hemL);
+                        loadAxes();
+                        config=0;
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+                        uniforms1.AOMap.value = loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                        uniforms2.AOMap.value = loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+			            uniforms3.AOMap.value = loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+                        material.texture1='MetalAxe';
+                        material.texture2='GoldAxe';
+                        material.texture3='WoodAxe';
+                        material.texture4='';
+                        material.texture5='';
+                        textureSelection.updateDisplay();
+                    }else if(newVal=='Shield'){
+                        scene.remove(obj);
+                        obj=new THREE.Object3D();
+                        scene.add(obj);
+                        scene.remove(dirL);
+                        scene.remove(hemL);
+                        loadShield();
+                        config=0;
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Normal.jpg");
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Color.jpg" );
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Normal.jpg");
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Color.jpg" );
+                        uniforms1.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal003_2K_AO.jpg" );
+                        uniforms2.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+			            uniforms3.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal005_2K_AO.jpg" );
+                        material.texture1='BlueShield';
+                        material.texture2='RedShield';
+                        material.texture3='GreenShield';
+                        material.texture4='';
+                        material.texture5='';
+                        textureSelection.updateDisplay();
+                    }else if(newVal=='Sword'){
+                        scene.remove(obj);
+                        obj=new THREE.Object3D();
+                        scene.add(obj);
+                        scene.remove(dirL);
+                        scene.remove(hemL);
+                        loadSword();
+                        config=0;
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms1.AOMap.value = loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                        uniforms2.AOMap.value = loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+			            uniforms3.AOMap.value = loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                        material.texture1='GoldSword';
+                        material.texture2='SilverSword';
+                        material.texture3='RedSword';
+                        material.texture4='';
+                        material.texture5='';
+                        textureSelection.updateDisplay();
+                    }else{
+                        scene.remove(obj);
+                        obj=new THREE.Object3D();
+                        scene.add(obj);
+                        scene.remove(dirL);
+                        scene.remove(hemL);
+                        loadSickle();
+                        config=0;
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+                        material.texture1='MetalAxe';
+                        material.texture2='SilverSword';
+                        material.texture3='RedSword';
+                        material.texture4='GoldSword';
+                        material.texture5='RedShield';
+                        textureSelection.updateDisplay();
+                    }
+                });
+                transormation=gui.addFolder('Transformation');
+                transormation.add(rotation,'rotationX').min(0).max(360).onChange(function(newVal){
+                    obj.rotation.x=newVal*Math.PI/180;
+                });
+                transormation.add(rotation,'rotationY').min(0).max(360).onChange(function(newVal){
+                    obj.rotation.y=newVal*Math.PI/180;
+                });
+                transormation.add(rotation,'rotationZ').min(0).max(360).onChange(function(newVal){
+                    obj.rotation.z=newVal*Math.PI/180;
+                });
+                transormation.add(traslate,'translateX').min(-10.0).max(10.0).onChange(function(newVal){
+                    obj.position.x=newVal;
+                });
+                transormation.add(traslate,'translateY').min(-10.0).max(10.0).onChange(function(newVal){
+                    obj.position.y=newVal;
+                });
+                transormation.add(traslate,'translateZ').min(-10.0).max(10.0).onChange(function(newVal){
+                    obj.position.z=newVal;
+                });
+                transormation.add(scale,'scaleX').min(0.1).max(5.0).onChange(function(newVal){
+                    obj.scale.x=newVal;
+                });
+                transormation.add(scale,'scaleY').min(0.1).max(5.0).onChange(function(newVal){
+                    obj.scale.y=newVal;
+                });
+                transormation.add(scale,'scaleZ').min(0.1).max(5.0).onChange(function(newVal){
+                    obj.scale.z=newVal;
+                });
+                background=gui.addFolder('Background');
+                background.add(backgroundMap,'map',['Chinese Garden','External','Internal','Night Meadow','Night Park','Studio']).onChange(function(newVal){
+                    if(newVal=='Chinese Garden'){
+                        loadEnvMapCG();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                    }else if(newVal=='External'){
+                        loadEnvMapE();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                    }else if(newVal=='Internal'){
+                        loadEnvMapI();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                    }else if(newVal=='Night Meadow'){
+                        loadEnvMapNM();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                    }else if(newVal=='Night Park'){
+                        loadEnvMapNP();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                    }else {
+                        loadEnvMapS();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                    }
+                });
+			}
+
+			function buildGui() {
+
+				clearGui();
+                modelSelection = gui.addFolder('Model Selection');
+                modelSelection.add(oggetto,'model',['Axe','Shield','Sword','Small Sword','Sickle']).onChange(function(newVal){
+                    if(newVal=='Axe'){
+                        for(var i=0;i<objects.length;i++){
+                            scene.remove(objects[i]);
+                            obj.remove(objects[i]);
+                        }
+                        loadAxes();
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+                        uniforms1.AOMap.value = loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                        uniforms2.AOMap.value = loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+			            uniforms3.AOMap.value = loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+                        material.texture1='MetalAxe';
+                        material.texture2='GoldAxe';
+                        material.texture3='WoodAxe';
+                        material.texture4='';
+                        material.texture5='';
+                        textureSelection.updateDisplay();
+                    }else if(newVal=='Shield'){
+                        for(var i=0;i<objects.length;i++){
+                            scene.remove(objects[i]);
+                            obj.remove(objects[i]);
+                        }
+                        loadShield();
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Normal.jpg");
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Color.jpg" );
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Normal.jpg");
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Color.jpg" );
+                        uniforms1.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal003_2K_AO.jpg" );
+                        uniforms2.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+			            uniforms3.AOMap.value = loadTexture( "textures/texture_shield/PaintedMetal005_2K_AO.jpg" );
+                        material.texture1='BlueShield';
+                        material.texture2='RedShield';
+                        material.texture3='GreenShield';
+                        material.texture4='';
+                        material.texture5='';
+                        textureSelection.updateDisplay();
+                    }else if(newVal == 'Small Sword'){
+                        for(var i=0;i<objects.length;i++){
+                            scene.remove(objects[i]);
+                            obj.remove(objects[i]);
+                        }
+                        config=1;
+                        loadSmallSword();
+                    }else if(newVal=='Sword'){
+                        for(var i=0;i<objects.length;i++){
+                            scene.remove(objects[i]);
+                            obj.remove(objects[i]);
+                        }
+                        loadSword();
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms1.AOMap.value = loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                        uniforms2.AOMap.value = loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+			            uniforms3.AOMap.value = loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                        material.texture1='GoldSword';
+                        material.texture2='SilverSword';
+                        material.texture3='RedSword';
+                        material.texture4='';
+                        material.texture5='';
+                        textureSelection.updateDisplay();
+                    }else{
+                        for(var i=0;i<objects.length;i++){
+                            scene.remove(objects[i]);
+                            obj.remove(objects[i]);
+                        }
+                        loadSickle();
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+                        material.texture1='MetalAxe';
+                        material.texture2='SilverSword';
+                        material.texture3='RedSword';
+                        material.texture4='GoldSword';
+                        material.texture5='RedShield';
+                        textureSelection.updateDisplay();
+                    }
+                });
+                textureSelection = gui.addFolder('Texture Selection');
+                textureSelection.add(material,'texture1',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','GoldCasual']).onChange(function(newVal){
+                    if(newVal=='MetalAxe'){
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                    }else if(newVal=='GoldAxe'){
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+                    }else if(newVal=='WoodAxe'){
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+                    }else if(newVal=='BlueShield'){
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Normal.jpg");
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_AO.jpg" );
+                    }else if(newVal=='RedShield'){
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+                    }else if(newVal=='GreenShield'){
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Normal.jpg");
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldSword'){
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                    }else if(newVal=='SilverSword'){
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms1.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/prova5.jpg" );
+                    }else{
+                        uniforms1.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms1.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms1.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms1.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms1.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms1.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                    }
+                });
+                textureSelection.add(material,'texture2',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','GoldCasual']).onChange(function(newVal){
+                    if(newVal=='MetalAxe'){
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                    }else if(newVal=='GoldAxe'){
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+                    }else if(newVal=='WoodAxe'){
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+                    }else if(newVal=='BlueShield'){
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Normal.jpg");
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_AO.jpg" );
+                    }else if(newVal=='RedShield'){
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+                    }else if(newVal=='GreenShield'){
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Normal.jpg");
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldSword'){
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                    }else if(newVal=='SilverSword'){
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms2.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/prova5.jpg" );
+                    }else{
+                        uniforms2.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms2.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms2.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms2.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms2.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms2.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                    }
+                });
+                textureSelection.add(material,'texture3',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','GoldCasual']).onChange(function(newVal){
+                    if(newVal=='MetalAxe'){
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                    }else if(newVal=='GoldAxe'){
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+                    }else if(newVal=='WoodAxe'){
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+                    }else if(newVal=='BlueShield'){
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Normal.jpg");
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_AO.jpg" );
+                    }else if(newVal=='RedShield'){
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+                    }else if(newVal=='GreenShield'){
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Normal.jpg");
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldSword'){
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                    }else if(newVal=='SilverSword'){
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms3.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/prova5.jpg" );
+                    }else{
+                        uniforms3.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms3.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms3.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms3.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms3.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms3.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                    }
+                });
+                textureSelection.add(material,'texture4',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','','GoldCasual']).onChange(function(newVal){
+                    if(newVal=='MetalAxe'){
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                    }else if(newVal=='GoldAxe'){
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+                    }else if(newVal=='WoodAxe'){
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+                    }else if(newVal=='BlueShield'){
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Normal.jpg");
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_AO.jpg" );
+                    }else if(newVal=='RedShield'){
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+                    }else if(newVal=='GreenShield'){
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Normal.jpg");
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldSword'){
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                    }else if(newVal=='SilverSword'){
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms4.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/prova5.jpg" );
+                    }else{
+                        uniforms4.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms4.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms4.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms4.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms4.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms4.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                    }
+                });
+                textureSelection.add(material,'texture5',['MetalAxe','GoldAxe','WoodAxe','BlueShield','GreenShield','RedShield','GoldSword','SilverSword','RedSword','','GoldCasual']).onChange(function(newVal){
+                    if(newVal=='MetalAxe'){
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Normal.jpg" );
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_axes/Metal032_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_axes/Metal032_2K_AO.jpg" );
+                    }else if(newVal=='GoldAxe'){
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Normal.jpg" );
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_axes/Metal034_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_axes/Metal034_2K_AO.jpg" );
+                    }else if(newVal=='WoodAxe'){
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Normal.jpg" );
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_axes/WoodSiding009_2K_AO.jpg" );
+                    }else if(newVal=='BlueShield'){
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Normal.jpg");
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal003_2K_AO.jpg" );
+                    }else if(newVal=='RedShield'){
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Normal.jpg");
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal004_2K_AO.jpg" );
+                    }else if(newVal=='GreenShield'){
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Normal.jpg");
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_shield/PaintedMetal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldSword'){
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Normal.jpg" );
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_sword/Metal007_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_sword/Metal007_2K_AO.jpg" );
+                    }else if(newVal=='SilverSword'){
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Normal.jpg" );
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_sword/Metal005_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_sword/Metal005_2K_AO.jpg" );
+                    }else if(newVal=='GoldCasual'){
+                        uniforms5.normalMap.value=loadTexture( "textures/prova3.jpg" );
+                        uniforms5.roughnessMap.value=loadTexture( "textures/prova6.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/prova2.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/prova4.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/prova.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/prova5.jpg" );
+                    }else{
+                        uniforms5.normalMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Normal.jpg" );
+                        uniforms5.roughnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Roughness.jpg" );
+                        uniforms5.specularMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Displacement.jpg" );
+                        uniforms5.metalnessMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Metalness.jpg" );
+                        uniforms5.diffuseMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_Color.jpg" );
+                        uniforms5.AOMap.value=loadTexture( "textures/texture_sword/Fabric026_2K_AO.jpg" );
+                    }
+                });
+
+                raygods=gui.addFolder('Ray Gods');
+                raygods.add(raygodsS,'effects').min(0).max(5).onChange(function(newVal){
+                    if(newVal<0.9999){
+                        newVal=0;
+                    }else if(newVal>=0.9999 && newVal<1.9999){
+                        newVal=1;
+                    }else if(newVal>=1.9999 && newVal<2.9999){
+                        newVal=2;
+                    }else if(newVal>=2.9999 && newVal<3.9999){
+                        newVal=3;
+                    }else if(newVal>=3.9999 && newVal<4.9999){
+                        newVal=4;
+                    }else{
+                        newVal=5;
+                    }
+                    raygodsS.effects=newVal;
+                });
+                raygods.add(raygodsS,'ray').onChange(function(newVal){
+                    raygodsS.ray=newVal;
+                    if(newVal){
+                        let areaImage = new Image();
+                        areaImage.src = POSTPROCESSING.SMAAEffect.areaImageDataURL;
+                        let searchImage = new Image();
+                        searchImage.src = POSTPROCESSING.SMAAEffect.searchImageDataURL;
+                        let smaaEffect = new POSTPROCESSING.SMAAEffect(searchImage,areaImage,1);
+                        let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, emMesh, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        });
+                        let godraysEffect1 = new POSTPROCESSING.GodRaysEffect(camera, emMesh1, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        });
+                        let godraysEffect2 = new POSTPROCESSING.GodRaysEffect(camera, emMesh2, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        });
+                        let godraysEffect3;
+                        let godraysEffect4;
+                        if(oggetto.model=='Sickle'){
+                            godraysEffect3 = new POSTPROCESSING.GodRaysEffect(camera, emMesh3, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        });
+                        godraysEffect4 = new POSTPROCESSING.GodRaysEffect(camera, emMesh4, {
+                            resolutionScale: 1,
+                            density: 0.8,
+                            decay: 0.95,
+                            weight: 0.9,
+                            samples: 100
+                        }); 
+                        }
+                        composer = new POSTPROCESSING.EffectComposer(renderer);
+                        let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+                        if(raygodsS.effects<1)renderPass.renderToScreen = true;
+                        composer.addPass(renderPass);
+                        if(raygodsS.effects==3){
+                            let effectPass;
+                            if(oggetto.model!='Sickle'){ 
+                               effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2);
+                            }else{
+                                effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect4);
+                            }
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if(raygodsS.effects==1){
+                            let effectPass;
+                            if(oggetto.model!='Sickle'){ 
+                               effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect2);
+                            }else{
+                                effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect4);
+                            }
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if(raygodsS.effects==2){
+                            let effectPass;
+                            if(oggetto.model!='Sickle'){ 
+                               effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect1,godraysEffect2);
+                            }else{
+                                effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect1,godraysEffect4);
+                            }
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if (oggetto.model=='Sickle' && raygodsS.effects==4){
+                            let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2,godraysEffect4);
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if (oggetto.model=='Sickle' && raygodsS.effects==5){
+                            let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2,godraysEffect3,godraysEffect4);
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if (oggetto.model!='Sickle' && raygodsS.effects==4){
+                            let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2);
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }else if (oggetto.model!='Sickle' && raygodsS.effects==5){
+                            let effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect1,godraysEffect2);
+                            effectPass.renderToScreen = true;
+                            composer.addPass(effectPass);
+                        }
+                        if(oggetto.model!='Sickle'){
+                            if(raygodsS.effects<1){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh1.material.transparent=false;
+                                emMesh1.material.depthWrite=true;
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                            }else if(raygodsS.effects==1){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh1.material.transparent=false;
+                                emMesh1.material.depthWrite=true;
+                            }else if(raygodsS.effects==2){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                            }
+                        }else{
+                            if(raygodsS.effects<1){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh1.material.transparent=false;
+                                emMesh1.material.depthWrite=true;
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                                emMesh4.material.transparent=false;
+                                emMesh4.material.depthWrite=true;
+                            }else if(raygodsS.effects==1){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh1.material.transparent=false;
+                                emMesh1.material.depthWrite=true;
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                            }else if(raygodsS.effects==2){
+                                emMesh.material.transparent=false;
+                                emMesh.material.depthWrite=true;
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                            }else if(raygodsS.effects==3){
+                                emMesh2.material.transparent=false;
+                                emMesh2.material.depthWrite=true;
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                            }else if(raygodsS.effects==4){
+                                emMesh3.material.transparent=false;
+                                emMesh3.material.depthWrite=true;
+                            }
+                        }
+                        ok=1;
+                    }else{
+                        composer = new POSTPROCESSING.EffectComposer(renderer);
+                        let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
+                        renderPass.renderToScreen = true;
+                        composer.addPass(renderPass);
+                        emMesh.material.transparent=false;
+                        emMesh.material.depthWrite=true;
+                        emMesh1.material.transparent=false;
+                        emMesh1.material.depthWrite=true;
+                        emMesh2.material.transparent=false;
+                        emMesh2.material.depthWrite=true;
+                    }
+                })
+
+                transormation=gui.addFolder('Transformation');
+                transormation.add(rotation,'rotationX').min(0).max(360).onChange(function(newVal){
+                    obj.rotation.x=newVal*Math.PI/180;
+                });
+                transormation.add(rotation,'rotationY').min(0).max(360).onChange(function(newVal){
+                    obj.rotation.y=newVal*Math.PI/180;
+                });
+                transormation.add(rotation,'rotationZ').min(0).max(360).onChange(function(newVal){
+                    obj.rotation.z=newVal*Math.PI/180;
+                });
+                transormation.add(traslate,'translateX').min(-10.0).max(10.0).onChange(function(newVal){
+                    obj.position.x=newVal;
+                });
+                transormation.add(traslate,'translateY').min(-10.0).max(10.0).onChange(function(newVal){
+                    obj.position.y=newVal;
+                });
+                transormation.add(traslate,'translateZ').min(-10.0).max(10.0).onChange(function(newVal){
+                    obj.position.z=newVal;
+                });
+                transormation.add(scale,'scaleX').min(0.1).max(5.0).onChange(function(newVal){
+                    obj.scale.x=newVal;
+                });
+                transormation.add(scale,'scaleY').min(0.1).max(5.0).onChange(function(newVal){
+                    obj.scale.y=newVal;
+                });
+                transormation.add(scale,'scaleZ').min(0.1).max(5.0).onChange(function(newVal){
+                    obj.scale.z=newVal;
+                });
+                lightConf=gui.addFolder('Lights Settings');
+                lightConf.add(lightSettings,'x').min(-20.0).max(20.0).onChange(function(newVal){
+                    uniforms1.pointLightPosition.value.x=newVal;
+                    uniforms2.pointLightPosition.value.x=newVal;
+                    uniforms3.pointLightPosition.value.x=newVal;
+                    uniforms4.pointLightPosition.value.x=newVal;
+                    uniforms5.pointLightPosition.value.x=newVal;
+                })
+                lightConf.add(lightSettings,'y').min(-20.0).max(20.0).onChange(function(newVal){
+                    uniforms1.pointLightPosition.value.y=newVal;
+                    uniforms2.pointLightPosition.value.y=newVal;
+                    uniforms3.pointLightPosition.value.y=newVal;
+                    uniforms4.pointLightPosition.value.y=newVal;
+                    uniforms5.pointLightPosition.value.y=newVal;
+                })
+                lightConf.add(lightSettings,'z').min(-20.0).max(20.0).onChange(function(newVal){
+                    uniforms1.pointLightPosition.value.z=newVal;
+                    uniforms2.pointLightPosition.value.z=newVal;
+                    uniforms3.pointLightPosition.value.z=newVal;
+                    uniforms4.pointLightPosition.value.z=newVal;
+                    uniforms5.pointLightPosition.value.z=newVal;
+                })
+                lightConf.add(lightSettings,'R').min(0.0).max(1.0).onChange(function(newVal){
+                    uniforms1.clight.value.x=newVal;
+                    uniforms2.clight.value.x=newVal;
+                    uniforms3.clight.value.x=newVal;
+                    uniforms4.clight.value.x=newVal;
+                    uniforms5.clight.value.x=newVal;
+                })
+                lightConf.add(lightSettings,'G').min(0.0).max(1.0).onChange(function(newVal){
+                    uniforms1.clight.value.y=newVal;
+                    uniforms2.clight.value.y=newVal;
+                    uniforms3.clight.value.y=newVal;
+                    uniforms4.clight.value.y=newVal;
+                    uniforms5.clight.value.y=newVal;
+                })
+                lightConf.add(lightSettings,'B').min(0.0).max(1.0).onChange(function(newVal){
+                    uniforms1.clight.value.z=newVal;
+                    uniforms2.clight.value.z=newVal;
+                    uniforms3.clight.value.z=newVal;
+                    uniforms4.clight.value.z=newVal;
+                    uniforms5.clight.value.z=newVal;
+                })
+                lightConf.add(lightSettings,'intensity').min(0.1).max(10.0).onChange(function(newVal){
+                    uniforms1.intensity.value=newVal;
+                    uniforms2.intensity.value=newVal;
+                    uniforms3.intensity.value=newVal;
+                    uniforms4.intensity.value=newVal;
+                    uniforms5.intensity.value=newVal;
+                })
+                emissiveColor=gui.addFolder('Emissive Color');
+                emissiveColor.add(emissive,'red').min(0.1).max(30.0).onChange(function(newVal){
+                    uniforms1.emissiveC.value.x=newVal;
+                    uniforms2.emissiveC.value.x=newVal;
+                    uniforms3.emissiveC.value.x=newVal;
+                    uniforms4.emissiveC.value.x=newVal;
+                    uniforms5.emissiveC.value.x=newVal;
+                })
+                emissiveColor.add(emissive,'green').min(0.1).max(30.0).onChange(function(newVal){
+                    uniforms1.emissiveC.value.y=newVal;
+                    uniforms2.emissiveC.value.y=newVal;
+                    uniforms3.emissiveC.value.y=newVal;
+                    uniforms4.emissiveC.value.y=newVal;
+                    uniforms5.emissiveC.value.y=newVal;
+                })
+                emissiveColor.add(emissive,'blue').min(0.1).max(30.0).onChange(function(newVal){
+                    uniforms1.emissiveC.value.z=newVal;
+                    uniforms2.emissiveC.value.z=newVal;
+                    uniforms3.emissiveC.value.z=newVal;
+                    uniforms4.emissiveC.value.z=newVal;
+                    uniforms5.emissiveC.value.z=newVal;
+                })
+                glassObject=gui.addFolder('Glass Settings');
+                glassObject.add(textureParameters,'nu').min(1.0).max(3.0).onChange(function(newVal){
+                    uniforms1.n1.value=newVal;
+                    uniforms2.n1.value=newVal;
+                    uniforms3.n1.value=newVal;
+                    uniforms4.n1.value=newVal;
+                    uniforms5.n1.value=newVal;
+                })
+                glassObject.add(textureParameters,'nd').min(1.0).max(3.0).onChange(function(newVal){
+                    uniforms1.n2.value=newVal;
+                    uniforms2.n2.value=newVal;
+                    uniforms3.n2.value=newVal;
+                    uniforms4.n2.value=newVal;
+                    uniforms5.n2.value=newVal;
+                })
+                background=gui.addFolder('Background');
+                background.add(backgroundMap,'map',['Chinese Garden','External','Internal','Night Meadow','Night Park','Studio']).onChange(function(newVal){
+                    if(newVal=='Chinese Garden'){
+                        loadEnvMapCG();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                        uniforms4.envMap.value=textureCube;
+                        uniforms5.envMap.value=textureCube;
+                    }else if(newVal=='External'){
+                        loadEnvMapE();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                        uniforms4.envMap.value=textureCube;
+                        uniforms5.envMap.value=textureCube;
+                    }else if(newVal=='Internal'){
+                        loadEnvMapI();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                        uniforms4.envMap.value=textureCube;
+                        uniforms5.envMap.value=textureCube;
+                    }else if(newVal=='Night Meadow'){
+                        loadEnvMapNM();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                        uniforms4.envMap.value=textureCube;
+                        uniforms5.envMap.value=textureCube;
+                    }else if(newVal=='Night Park'){
+                        loadEnvMapNP();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                        uniforms4.envMap.value=textureCube;
+                        uniforms5.envMap.value=textureCube;
+                    }else {
+                        loadEnvMapS();
+                        uniforms1.envMap.value=textureCube;
+                        uniforms2.envMap.value=textureCube;
+                        uniforms3.envMap.value=textureCube;
+                        uniforms4.envMap.value=textureCube;
+                        uniforms5.envMap.value=textureCube;
+                    }
+                });
+			}
+
+			init();
+			buildGui();
+			update();
+			render();
+
+        </script>
+	</body>
+</html>
