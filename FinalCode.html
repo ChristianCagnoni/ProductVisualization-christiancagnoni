@@ -37,8 +37,7 @@
                                 <option value="sickle">Sickle</option>
                             </select>
                         </label>
-                        <label>Localized GodRays:<input id="localGodrays" onchange="changeGodRays()" type="checkbox"></label>
-                        <label>Global GodRays:<input id="globalGodrays" onchange="changeGodRaysGlob()" type="checkbox"></label>
+                        <label>GodRays:<input id="globalGodrays" onchange="changeGodRaysGlob()" type="checkbox"></label>
                         <label>Blurred:<input id="blurred" onchange="changeBlurred()" type="checkbox"></label>
                         <label>Film Grain:<input id="film" onchange="changeFilm()" type="checkbox"></label>
                         <label>Remove Reflections:<input id="iem" onchange="changeIem()" type="checkbox"></label>
@@ -208,7 +207,6 @@
             function changeFilm(){
                 var film=document.getElementById("film");
                 var x = document.getElementById("globalGodrays");
-                var y = document.getElementById("localGodrays");
                 var z = document.getElementById("blurred");
                 var aces=document.getElementById("aces");
                 if(aces.checked==true){
@@ -218,8 +216,6 @@
                 if(film.checked==true){
                     x.checked=false;
                     changeGodRaysGlob();
-                    y.checked=false;
-                    changeGodRays();
                     z.checked=false;
                     changeBlurred();
                     filmpass=new THREE.ShaderPass(FilmGrain);
@@ -566,7 +562,6 @@
             */
             function changeGodRaysGlob(){
                 var x = document.getElementById("globalGodrays");
-                var y = document.getElementById("localGodrays");
                 var z = document.getElementById("blurred");
                 var price=document.getElementById("price");
                 var film=document.getElementById("film");
@@ -577,8 +572,6 @@
                     aces.checked=false;
                 }
                 if(x.checked==true){
-                    y.checked=false;
-                    changeGodRays();
                     z.checked=false;
                     changeBlurred();
                     film.checked=false;
@@ -614,128 +607,11 @@
             }
 
             /*
-            funzione che gestisce l'attivazione dei god rays localizzati
-            usa 2 god rays per ogni prodotto
-            */
-            //1)blurPass->(convolution matrial:
-            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/convolution/shader.vert <- inizilizza i coordinate dei 4 angoli dei vertici e passali al fragment 
-            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/convolution/shader.frag <- accedi ai 4 campioni e fai la media
-            //)(kernelSize)
-            //2)renderer pass
-            //3)depth mask pass->(DepthMaskMaterial: <- inizializza uniforms per gli shaders e fai test sul depth per stabilire dove applicare l'effetto e dove no
-            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/common/shader.vert <- media della posizione sommato a 0.5
-            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/depth-mask/shader.frag) <-in base ai test fatti nel material stabilisce quali parti ricevono l'ffetto god rays mascherando quelle su cui non applicarlo
-            //4)godRaysPass->(GodRaysMaterial:<-inizializza i vari uniforms necessari per l'effetto god rays
-            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/common/shader.vert <- media della posizione sommato a 0.5
-            //https://github.com/vanruesc/postprocessing/blob/main/src/materials/glsl/god-rays/shader.frag) <- uguale a quello globale presente qui
-            function changeGodRays(){
-                var x = document.getElementById("localGodrays");
-                var y = document.getElementById("globalGodrays");
-                var z = document.getElementById("blurred");
-                var prod= document.getElementById("products").value;
-                var price=document.getElementById("price");
-                var film=document.getElementById("film");
-                var aces=document.getElementById("aces");
-                if(aces.checked==true){
-                    composer.removePass(aces_TM);
-                    aces.checked=false;
-                }
-                if(x.checked==true){
-                    y.checked=false;
-                    changeGodRaysGlob();
-                    z.checked=false;
-                    changeBlurred();
-                    film.checked=false;
-                    changeFilm();
-                    let godraysEffect = new POSTPROCESSING.GodRaysEffect(camera, emMesh, {
-                            resolutionScale: 1,
-                            density: 0.8,
-                            decay: 0.95,
-                            weight: 0.9,
-                            samples: 100
-                        });
-                    let godraysEffect1 = new POSTPROCESSING.GodRaysEffect(camera, emMesh1, {
-                            resolutionScale: 1,
-                            density: 0.8,
-                            decay: 0.95,
-                            weight: 0.9,
-                            samples: 100
-                        });
-                    let godraysEffect2 = new POSTPROCESSING.GodRaysEffect(camera, emMesh2, {
-                            resolutionScale: 1,
-                            density: 0.8,
-                            decay: 0.95,
-                            weight: 0.9,
-                            samples: 100
-                        });
-                    var godraysEffect3;
-                    var godraysEffect4;
-                    if(prod=="sickle"){
-                            godraysEffect3 = new POSTPROCESSING.GodRaysEffect(camera, emMesh3, {
-                            resolutionScale: 1,
-                            density: 0.8,
-                            decay: 0.95,
-                            weight: 0.9,
-                            samples: 100
-                            });
-                        godraysEffect4 = new POSTPROCESSING.GodRaysEffect(camera, emMesh4, {
-                            resolutionScale: 1,
-                            density: 0.8,
-                            decay: 0.95,
-                            weight: 0.9,
-                            samples: 100
-                        }); 
-                    }
-                    composer = new POSTPROCESSING.EffectComposer(renderer);
-                    let renderPass = new POSTPROCESSING.RenderPass(scene, camera);
-                    composer.addPass(renderPass);
-                    var effectPass;
-                    if(prod!="sickle"){
-                            effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect1,godraysEffect2);
-                            effectPass.renderToScreen = true;
-                            composer.addPass(effectPass);
-                            emMesh.material.transparent=false;
-                            emMesh.material.depthWrite=true;
-                    }else{
-                            effectPass = new POSTPROCESSING.EffectPass(camera,godraysEffect,godraysEffect4);
-                            effectPass.renderToScreen = true;
-                            composer.addPass(effectPass);
-                            emMesh1.material.transparent=false;
-                            emMesh1.material.depthWrite=true;
-                            emMesh2.material.transparent=false;
-                            emMesh2.material.depthWrite=true;
-                            emMesh3.material.transparent=false;
-                            emMesh3.material.depthWrite=true;
-                    }
-                }else{
-                    composer = new THREE.EffectComposer( renderer );
-			        composer.addPass( new THREE.RenderPass( scene, camera ) );
-
-                    composer.addPass(fxaa);
-                    fxaa.renderToScreen=true;
-
-                    emMesh.material.transparent=false;
-                    emMesh.material.depthWrite=true;
-                    emMesh1.material.transparent=false;
-                    emMesh1.material.depthWrite=true;
-                    emMesh2.material.transparent=false;
-                    emMesh2.material.depthWrite=true;
-                    if(prod=="sickle"){
-                        emMesh3.material.transparent=false;
-                        emMesh3.material.depthWrite=true;
-                        emMesh4.material.transparent=false;
-                        emMesh4.material.depthWrite=true;
-                    }
-                }
-            }
-
-            /*
             funzione che gestisce l'attivazione dell'effetto blur
             prima aggiunge il blur verticale e poi quello orizzontale
             */
             function changeBlurred(){
                 var x = document.getElementById("blurred");
-                var y = document.getElementById("localGodrays");
                 var z = document.getElementById("globalGodrays");
                 var film=document.getElementById("film");
                 var price=document.getElementById("price");
@@ -745,8 +621,6 @@
                     aces.checked=false;
                 }
                 if(x.checked==true){
-                    y.checked=false;
-                    changeGodRays();
                     z.checked=false;
                     changeGodRaysGlob();
                     film.checked=false;
