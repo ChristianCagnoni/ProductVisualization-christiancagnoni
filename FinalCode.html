@@ -1754,7 +1754,7 @@
                     
                     "float rcpDirMin = 1.0 / (min(abs(dir.x), abs(dir.y)) + dirReduce);",//reciproco minima luminanza con riduzione applicata
                     "dir = min(vec2(FXAA_SPAN_MAX, FXAA_SPAN_MAX),max(vec2(-FXAA_SPAN_MAX, -FXAA_SPAN_MAX),dir * rcpDirMin)) * inverseVP;",//aggiusta fattore di distanza luminanza(inverseVP per applicare effetto al solo oggetto)
-                    "vec3 rgbA = 0.5 * (texture2D(tex, fragCoord * inverseVP + dir * (1.0 / 3.0 - 0.5)).xyz +texture2D(tex, fragCoord * inverseVP + dir * (2.0 / 3.0 + 0.5)).xyz);",//colore centrale(Controls removal of sub-pixel aliasing)
+                    "vec3 rgbA = 0.5 * (texture2D(tex, fragCoord * inverseVP + dir * (1.0 / 3.0 - 0.5)).xyz +texture2D(tex, fragCoord * inverseVP + dir * (2.0 / 3.0 - 0.5)).xyz);",//colore centrale(Controls removal of sub-pixel aliasing)
                     "vec3 rgbB = rgbA *0.5+ 0.25 * (texture2D(tex, fragCoord * inverseVP + dir * (0.0/3.0 -0.5)).xyz +texture2D(tex, fragCoord * inverseVP + dir * (3.0/3.0 - 0.5)).xyz);",//colore bordi
 
                     "float lumaB = dot(rgbB, luma);",//luminanza bordi
