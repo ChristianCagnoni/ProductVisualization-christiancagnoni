@@ -1828,7 +1828,7 @@
                     "void main()",
                     "{",
                         "vec4 color = texture2D( tDiffuse, vUv );",//colore ottenuto dalla texture della passata precedente
-                        "gl_FragColor = vec4( pow( aces_fitted(color.rgb),vec3(1.0/2.2)),color.a );",
+                        "gl_FragColor = vec4( aces_fitted(color.rgb),color.a );",
             "}"
             ].join("\n")
 
